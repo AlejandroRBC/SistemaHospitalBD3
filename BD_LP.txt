@@ -1,0 +1,155 @@
+// =====================================================
+// BASE DE DATOS CENTRAL - LA PAZ (LPZ)
+// Nodo Mediador + Hospital Local
+// PostgreSQL
+// =====================================================
+
+Project Hospital_Distribuido_LPZ {
+  database_type: "PostgreSQL"
+  Note: '''
+  Nodo central del sistema distribuido hospitalario.
+  LPZ funciona como:
+  - Hospital local
+  - Nodo mediador
+  - Coordinador de consultas distribuidas
+  '''
+}
+
+// =====================================================
+// TABLA HOSPITAL
+// =====================================================
+
+Table hospital {
+  id_hospital integer [pk]
+  nombre varchar
+  ciudad varchar
+  ip_radmin varchar
+  puerto integer
+  motor_bd varchar
+}
+
+// =====================================================
+// PACIENTES LOCALES LPZ
+// Fragmentación Horizontal
+// =====================================================
+
+Table paciente {
+  id_paciente integer [pk]
+  nombre varchar
+  apellido varchar
+  fecha_nacimiento date
+  tipo_sangre varchar
+  alergias text
+  enfermedades_cronicas text
+  telefono varchar
+  direccion text
+
+  // Fragmentación
+  id_hospital integer
+
+  Note: '''
+  SOLO almacena pacientes de LPZ.
+  '''
+}
+
+// =====================================================
+// HISTORIAL CLINICO LOCAL
+// =====================================================
+
+Table historial_clinico {
+  id_historial integer [pk]
+  id_paciente integer
+  observaciones text
+  fecha timestamp
+
+  Note: '''
+  Historiales completos SOLO de pacientes LPZ.
+  '''
+}
+
+// =====================================================
+// CONSULTAS MEDICAS
+// =====================================================
+
+Table consulta {
+  id_consulta integer [pk]
+  id_paciente integer
+  diagnostico text
+  tratamiento text
+  fecha timestamp
+
+  id_hospital integer
+}
+
+// =====================================================
+// REPLICA CRITICA
+// Replica parcial de otros hospitales
+// =====================================================
+
+Table replica_critica {
+  id_replica integer [pk]
+  id_paciente integer
+  hospital_origen varchar
+
+  tipo_sangre varchar
+  alergias text
+  enfermedades_cronicas text
+
+  fecha_actualizacion timestamp
+
+  Note: '''
+  Replica parcial de CBBA y STCZ.
+  SOLO datos criticos.
+  '''
+}
+
+// =====================================================
+// CATALOGO DE FRAGMENTACION
+// Nodo Mediador
+// =====================================================
+
+Table fragment_catalog {
+  id_fragmento integer [pk]
+
+  tabla varchar
+  hospital varchar
+
+  ip_servidor varchar
+  puerto integer
+
+  motor_bd varchar
+
+  Note: '''
+  Define donde vive cada fragmento.
+  Utilizado por el mediador.
+  '''
+}
+
+// =====================================================
+// LOG DE CONSULTAS DISTRIBUIDAS
+// =====================================================
+
+Table distributed_logs {
+  id_log integer [pk]
+
+  hospital_solicitante varchar
+  hospital_destino varchar
+
+  endpoint varchar
+
+  estado varchar
+
+  fecha timestamp
+}
+
+// =====================================================
+// RELACIONES
+// =====================================================
+
+Ref: paciente.id_hospital > hospital.id_hospital
+
+Ref: historial_clinico.id_paciente > paciente.id_paciente
+
+Ref: consulta.id_paciente > paciente.id_paciente
+
+Ref: consulta.id_hospital > hospital.id_hospital

@@ -8,7 +8,8 @@ mediador_bp = Blueprint("mediador", __name__)
 
 @mediador_bp.route("/buscar_paciente/<int:patient_id>", methods=["GET"])
 def buscar_paciente_nacional(patient_id):
-    resultado = resolve_patient(patient_id)
+    solicitante = request.args.get("origen", "CBBA")
+    resultado = resolve_patient(patient_id, solicitante)
     if "error" in resultado:
         return error_response(resultado["error"], 404)
     return success_response(resultado)
@@ -22,8 +23,9 @@ def recibir_replica():
 
     execute_query(
         """INSERT INTO replica_critica
-           (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
-           VALUES (%s, %s, %s, %s, %s)""",
+           (id_paciente, hospital_origen, tipo_sangre, alergias,
+            enfermedades_cronicas, fecha_actualizacion)
+           VALUES (%s, %s, %s, %s, %s, NOW())""",
         (
             data["id_paciente"],
             data.get("hospital_origen", "DESCONOCIDO"),

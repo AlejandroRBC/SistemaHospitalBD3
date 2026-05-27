@@ -4,7 +4,8 @@ from db import execute_query
 
 def get_local_patient(patient_id):
     row = execute_query(
-        "SELECT id_paciente, nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital "
+        "SELECT id_paciente, nombre, apellido, fecha_nacimiento, "
+        "tipo_sangre, alergias, enfermedades_cronicas, telefono, direccion, id_hospital "
         "FROM paciente WHERE id_paciente = %s",
         (patient_id,),
         fetchone=True
@@ -14,17 +15,22 @@ def get_local_patient(patient_id):
     return {
         "id_paciente": row[0],
         "nombre": row[1],
-        "tipo_sangre": row[2],
-        "alergias": row[3],
-        "enfermedades_cronicas": row[4],
-        "id_hospital": row[5],
+        "apellido": row[2],
+        "fecha_nacimiento": str(row[3]) if row[3] else None,
+        "tipo_sangre": row[4],
+        "alergias": row[5],
+        "enfermedades_cronicas": row[6],
+        "telefono": row[7],
+        "direccion": row[8],
+        "id_hospital": row[9],
         "hospital_origen": LOCAL_HOSPITAL
     }
 
 
 def get_all_local_patients():
     rows = execute_query(
-        "SELECT id_paciente, nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital "
+        "SELECT id_paciente, nombre, apellido, fecha_nacimiento, "
+        "tipo_sangre, alergias, enfermedades_cronicas, telefono, direccion, id_hospital "
         "FROM paciente ORDER BY id_paciente",
         fetchall=True
     )
@@ -32,10 +38,14 @@ def get_all_local_patients():
         {
             "id_paciente": r[0],
             "nombre": r[1],
-            "tipo_sangre": r[2],
-            "alergias": r[3],
-            "enfermedades_cronicas": r[4],
-            "id_hospital": r[5],
+            "apellido": r[2],
+            "fecha_nacimiento": str(r[3]) if r[3] else None,
+            "tipo_sangre": r[4],
+            "alergias": r[5],
+            "enfermedades_cronicas": r[6],
+            "telefono": r[7],
+            "direccion": r[8],
+            "id_hospital": r[9],
             "hospital_origen": LOCAL_HOSPITAL
         }
         for r in rows
@@ -44,13 +54,18 @@ def get_all_local_patients():
 
 def create_local_patient(data):
     execute_query(
-        "INSERT INTO paciente (nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital) "
-        "VALUES (%s, %s, %s, %s, %s)",
+        "INSERT INTO paciente (nombre, apellido, fecha_nacimiento, tipo_sangre, "
+        "alergias, enfermedades_cronicas, telefono, direccion, id_hospital) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
         (
             data["nombre"],
+            data.get("apellido"),
+            data.get("fecha_nacimiento"),
             data.get("tipo_sangre"),
             data.get("alergias"),
             data.get("enfermedades_cronicas"),
+            data.get("telefono"),
+            data.get("direccion"),
             data.get("id_hospital", 1)
         )
     )
@@ -110,3 +125,42 @@ def create_local_history(data):
         fetchone=True
     )
     return get_local_history(row[0])
+
+
+def get_consultas_for_patient(patient_id):
+    rows = execute_query(
+        "SELECT id_consulta, id_paciente, diagnostico, tratamiento, fecha, id_hospital "
+        "FROM consulta WHERE id_paciente = %s ORDER BY fecha DESC",
+        (patient_id,),
+        fetchall=True
+    )
+    return [
+        {
+            "id_consulta": r[0],
+            "id_paciente": r[1],
+            "diagnostico": r[2],
+            "tratamiento": r[3],
+            "fecha": str(r[4]) if r[4] else None,
+            "id_hospital": r[5]
+        }
+        for r in rows
+    ]
+
+
+def get_all_hospitals():
+    rows = execute_query(
+        "SELECT id_hospital, nombre, ciudad, ip_radmin, puerto, motor_bd "
+        "FROM hospital ORDER BY id_hospital",
+        fetchall=True
+    )
+    return [
+        {
+            "id_hospital": r[0],
+            "nombre": r[1],
+            "ciudad": r[2],
+            "ip_radmin": r[3],
+            "puerto": r[4],
+            "motor_bd": r[5]
+        }
+        for r in rows
+    ]

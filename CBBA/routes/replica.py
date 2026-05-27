@@ -12,9 +12,10 @@ def recibir_replica():
         return error_response("Datos de replica incompletos", 400)
 
     execute_query(
-        """INSERT INTO replica_critica
-           (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
-           VALUES (?, ?, ?, ?, ?)""",
+        """INSERT INTO replica_critica_cbba
+           (id_paciente, hospital_origen, tipo_sangre, alergias,
+            enfermedades_cronicas, fecha_actualizacion)
+           VALUES (?, ?, ?, ?, ?, GETDATE())""",
         (
             data["id_paciente"],
             data.get("hospital_origen", "DESCONOCIDO"),

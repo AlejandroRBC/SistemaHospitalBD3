@@ -9,8 +9,9 @@ def buscar_paciente_nacional(patient_id):
 
     try:
         rows = execute_openquery(
-            "SELECT id_paciente, nombre, tipo_sangre, alergias, "
-            "enfermedades_cronicas, id_hospital "
+            "SELECT id_paciente, nombre, apellido, fecha_nacimiento, "
+            "tipo_sangre, alergias, enfermedades_cronicas, telefono, "
+            "direccion, id_hospital "
             f"FROM paciente WHERE id_paciente = {patient_id}"
         )
         if rows:
@@ -18,10 +19,14 @@ def buscar_paciente_nacional(patient_id):
             return {
                 "id_paciente": r[0],
                 "nombre": r[1],
-                "tipo_sangre": r[2],
-                "alergias": r[3],
-                "enfermedades_cronicas": r[4],
-                "id_hospital": r[5],
+                "apellido": r[2],
+                "fecha_nacimiento": str(r[3]) if r[3] else None,
+                "tipo_sangre": r[4],
+                "alergias": r[5],
+                "enfermedades_cronicas": r[6],
+                "telefono": r[7],
+                "direccion": r[8],
+                "id_hospital": r[9],
                 "hospital_origen": "LPZ"
             }
         return {"error": "Paciente no encontrado en la red nacional"}
@@ -45,16 +50,17 @@ def enviar_replica(hospital, data):
             execute_openquery_insert(
                 "replica_critica",
                 ["id_paciente", "hospital_origen", "tipo_sangre",
-                 "alergias", "enfermedades_cronicas"],
+                 "alergias", "enfermedades_cronicas", "fecha_actualizacion"],
                 (
                     data["id_paciente"],
                     data.get("hospital_origen", "CBBA"),
                     data.get("tipo_sangre"),
                     data.get("alergias"),
-                    data.get("enfermedades_cronicas")
+                    data.get("enfermedades_cronicas"),
+                    "NOW()"
                 )
             )
             return {"mensaje": f"Replica almacenada en {hospital}"}
         except Exception as e:
             return {"error": f"No se pudo replicar en {hospital}: {str(e)}"}
-    return {"error": f"STCZ no implementado"}
+    return {"error": "STCZ no implementado"}

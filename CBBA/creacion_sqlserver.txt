@@ -13,34 +13,48 @@ USE hospital_cbba;
 GO
 
 -- ======================================================================
--- 2. ESQUEMA DE TABLAS
+-- 2. ESQUEMA DE TABLAS (basado en BD_CBBA.txt)
 -- ======================================================================
 
-CREATE TABLE paciente (
+CREATE TABLE paciente_cbba (
     id_paciente INT PRIMARY KEY IDENTITY(1,1),
     nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100),
+    fecha_nacimiento DATE,
     tipo_sangre VARCHAR(5),
     alergias TEXT,
     enfermedades_cronicas TEXT,
+    telefono VARCHAR(20),
+    direccion TEXT,
     id_hospital INTEGER DEFAULT 2
 );
 GO
 
-CREATE TABLE historial_clinico (
+CREATE TABLE historial_cbba (
     id_historial INT PRIMARY KEY IDENTITY(1,1),
-    id_paciente INT NOT NULL REFERENCES paciente(id_paciente),
+    id_paciente INT NOT NULL REFERENCES paciente_cbba(id_paciente),
     observaciones TEXT,
     fecha DATETIME DEFAULT GETDATE()
 );
 GO
 
-CREATE TABLE replica_critica (
+CREATE TABLE consulta_cbba (
+    id_consulta INT PRIMARY KEY IDENTITY(1,1),
+    id_paciente INT NOT NULL REFERENCES paciente_cbba(id_paciente),
+    diagnostico TEXT,
+    tratamiento TEXT,
+    fecha DATETIME DEFAULT GETDATE()
+);
+GO
+
+CREATE TABLE replica_critica_cbba (
     id_replica INT PRIMARY KEY IDENTITY(1,1),
     id_paciente INT NOT NULL,
     hospital_origen VARCHAR(10) NOT NULL,
     tipo_sangre VARCHAR(5),
     alergias TEXT,
-    enfermedades_cronicas TEXT
+    enfermedades_cronicas TEXT,
+    fecha_actualizacion DATETIME DEFAULT GETDATE()
 );
 GO
 
@@ -48,16 +62,16 @@ GO
 -- 3. DATOS DE EJEMPLO (SEED)
 -- ======================================================================
 
-INSERT INTO paciente (nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital)
+INSERT INTO paciente_cbba (nombre, apellido, fecha_nacimiento, tipo_sangre, alergias, enfermedades_cronicas, telefono, direccion, id_hospital)
 VALUES
-    ('Rosa Mamani',   'A-',  'Sulfa',            'Ninguna',      2),
-    ('Luis Fernandez','O+',  'Ninguna',          'Colesterol',   2),
-    ('Sofia Rojas',   'AB+', 'Penicilina',       'Migrana',      2),
-    ('Diego Alarcon', 'B-',  'Frutos secos',     'Ninguna',      2),
-    ('Gabriela Soliz','O+',  'Ninguna',          'Hipotiroidismo',2);
+    ('Rosa',    'Mamani',    '1992-04-18', 'A-',  'Sulfa',            'Ninguna',       '72345678', 'Av. Heroinas #123, Cochabamba',  2),
+    ('Luis',    'Fernandez', '1980-09-25', 'O+',  'Ninguna',          'Colesterol',    '71456789', 'Calle Baptista #456, Cochabamba',2),
+    ('Sofia',   'Rojas',     '1995-12-02', 'AB+', 'Penicilina',       'Migrana',       '74567890', 'Av. America #789, Cochabamba',   2),
+    ('Diego',   'Alarcon',   '1988-07-14', 'B-',  'Frutos secos',     'Ninguna',       '75678901', 'Calle Ecuador #321, Cochabamba', 2),
+    ('Gabriela','Soliz',     '1975-03-30', 'O+',  'Ninguna',          'Hipotiroidismo','76789012', 'Zona Norte #654, Cochabamba',    2);
 GO
 
-INSERT INTO historial_clinico (id_paciente, observaciones, fecha)
+INSERT INTO historial_cbba (id_paciente, observaciones, fecha)
 VALUES
     (1, 'Control general. Presion arterial normal.',          '2025-03-10 09:30:00'),
     (1, 'Analisis de sangre. Resultados estables.',           '2025-05-12 10:00:00'),
@@ -67,15 +81,26 @@ VALUES
     (5, 'Control de hormona tiroidea. Ajuste de dosis.',      '2025-03-25 14:00:00');
 GO
 
+INSERT INTO consulta_cbba (id_paciente, diagnostico, tratamiento, fecha)
+VALUES
+    (1, 'Paciente estable. Control de rutina.',              'Sin novedades. Proximo control en 6 meses.',          '2025-05-12 10:00:00'),
+    (2, 'Hipercolesterolemia',                               'Atorvastatina 20mg/dia. Dieta baja en grasas.',       '2025-02-18 11:00:00'),
+    (3, 'Migrana cronica',                                   'Sumatriptan 50mg en crisis. Evitar desencadenantes.', '2025-04-22 15:00:00'),
+    (4, 'Paciente sano. Control alergologico.',              'Sin sintomas. Continuar evitando alergenos.',         '2025-01-30 08:30:00'),
+    (5, 'Hipotiroidismo controlado',                         'Levotiroxina 75mcg/dia. Control en 3 meses.',         '2025-03-25 14:00:00');
+GO
+
 -- ======================================================================
 -- 4. VERIFICAR DATOS INSERTADOS
 -- ======================================================================
 
-SELECT 'paciente' AS tabla, COUNT(*) AS registros FROM paciente
+SELECT 'paciente_cbba' AS tabla, COUNT(*) AS registros FROM paciente_cbba
 UNION ALL
-SELECT 'historial_clinico', COUNT(*) FROM historial_clinico
+SELECT 'historial_cbba', COUNT(*) FROM historial_cbba
 UNION ALL
-SELECT 'replica_critica', COUNT(*) FROM replica_critica;
+SELECT 'consulta_cbba', COUNT(*) FROM consulta_cbba
+UNION ALL
+SELECT 'replica_critica_cbba', COUNT(*) FROM replica_critica_cbba;
 GO
 
 -- ======================================================================
