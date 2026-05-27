@@ -197,58 +197,110 @@ code {
     color: var(--rojo-oscuro);
 }
 
-/* Node Grid */
-.node-grid {
+/* Conexiones Card */
+.conexiones-card {
+    border-left-color: var(--rojo);
+}
+
+.conexiones-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
+    margin-bottom: 12px;
 }
 
-.node-card {
+.conexion-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
     background: var(--blanco);
     border: 2px solid #E0E0E0;
     border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    transition: border-color 0.2s;
+    padding: 16px;
+    transition: border-color 0.3s, background 0.3s;
 }
 
-.node-card:hover {
-    border-color: var(--verde);
+.conexion-card:hover {
+    border-color: var(--gris-oscuro);
 }
 
-.node-card.lpz {
-    border-color: var(--verde);
-    background: var(--verde-claro);
-}
-
-.node-indicator {
-    width: 12px;
-    height: 12px;
-    background: var(--verde);
+.conexion-indicator {
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    margin: 0 auto 8px;
-    box-shadow: 0 0 6px rgba(0,122,62,0.4);
+    flex-shrink: 0;
+    transition: background 0.3s, box-shadow 0.3s;
 }
 
-.node-card h3 {
-    font-size: 16px;
+.conexion-indicator.checking {
+    background: #FFC107;
+    box-shadow: 0 0 8px rgba(255, 193, 7, 0.5);
+    animation: pulse 1s ease-in-out infinite;
+}
+
+.conexion-indicator.connected {
+    background: var(--verde);
+    box-shadow: 0 0 8px rgba(0, 122, 62, 0.5);
+}
+
+.conexion-indicator.disconnected {
+    background: var(--rojo);
+    box-shadow: 0 0 8px rgba(206, 17, 38, 0.5);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.conexion-info {
+    flex: 1;
+}
+
+.conexion-info h3 {
+    font-size: 15px;
     color: var(--gris-oscuro);
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
-.node-role {
-    font-size: 13px;
+.conexion-role {
+    font-size: 11px;
     color: var(--rojo);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 4px;
 }
 
-.node-db {
-    font-size: 12px;
+.conexion-db {
+    font-size: 11px;
     color: #888;
+}
+
+.conexion-status {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.conexion-text {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.conexion-text.connected {
+    color: var(--verde);
+}
+
+.conexion-text.disconnected {
+    color: var(--rojo);
+}
+
+.conexion-timestamp {
+    font-size: 12px;
+    color: #AAA;
+    text-align: right;
+    margin-top: 4px;
 }
 
 /* Footer */
@@ -283,7 +335,7 @@ code {
         grid-template-columns: 1fr;
     }
 
-    .node-grid {
+    .conexiones-grid {
         grid-template-columns: 1fr;
     }
 

@@ -8,5 +8,5 @@ POSTGRES = {
     "host": "localhost",
     "database": "hospital_lpz",
     "user": "postgres",
-    "password": "1234"
+    "password": "admin"
 }

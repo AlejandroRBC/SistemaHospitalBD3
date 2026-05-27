@@ -24,3 +24,15 @@ def execute_query(query, params=None, fetchone=False, fetchall=False):
     cur.close()
     conn.close()
     return result
+
+
+def check_connection():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        conn.close()
+        return True
+    except Exception:
+        return False

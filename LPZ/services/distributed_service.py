@@ -14,9 +14,17 @@ def buscar_paciente_distribuido(patient_id):
 
 
 def obtener_estado_conexiones():
+    from db import check_connection as check_local_db
     from services.remote_query_service import check_node_health
 
-    estados = {}
+    local_ok = check_local_db()
+    estados = {
+        "LPZ": {
+            "hospital": "La Paz",
+            "status": "activo" if local_ok else "desconectado",
+            "online": local_ok
+        }
+    }
     for hospital in ["CBBA", "STCZ"]:
         estados[hospital] = check_node_health(hospital)
     return estados
