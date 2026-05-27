@@ -1,40 +1,60 @@
-import requests
-from hospital_ips import HOSPITALS
-
-TIMEOUT = 5
+from db import execute_query, execute_openquery, execute_openquery_insert
+from services.patient_service import get_local_patient
 
 
 def buscar_paciente_nacional(patient_id):
-    url = f"{HOSPITALS['LPZ']}/buscar_paciente/{patient_id}"
+    local = get_local_patient(patient_id)
+    if local is not None:
+        return local
+
     try:
-        resp = requests.get(url, timeout=TIMEOUT)
-        if resp.status_code == 200:
-            return resp.json()
-        return {"error": f"Paciente no encontrado en la red nacional"}
-    except requests.ConnectionError:
-        return {"error": "Sin conexion con el nodo mediador (LPZ)"}
-    except requests.Timeout:
-        return {"error": "Tiempo de espera agotado al consultar LPZ"}
+        rows = execute_openquery(
+            "SELECT id_paciente, nombre, tipo_sangre, alergias, "
+            "enfermedades_cronicas, id_hospital "
+            f"FROM paciente WHERE id_paciente = {patient_id}"
+        )
+        if rows:
+            r = rows[0]
+            return {
+                "id_paciente": r[0],
+                "nombre": r[1],
+                "tipo_sangre": r[2],
+                "alergias": r[3],
+                "enfermedades_cronicas": r[4],
+                "id_hospital": r[5],
+                "hospital_origen": "LPZ"
+            }
+        return {"error": "Paciente no encontrado en la red nacional"}
+    except Exception as e:
+        return {"error": f"Error al consultar LPZ via Linked Server: {str(e)}"}
 
 
 def check_node_health(hospital):
-    url = f"{HOSPITALS[hospital]}/estado"
-    try:
-        resp = requests.get(url, timeout=TIMEOUT)
-        if resp.status_code == 200:
-            data = resp.json()
-            return {"status": data.get("status", "activo"), "online": True}
-        return {"status": "error", "online": False}
-    except (requests.ConnectionError, requests.Timeout):
-        return {"status": "desconectado", "online": False}
+    if hospital == "LPZ":
+        try:
+            execute_openquery("SELECT 1")
+            return {"status": "activo", "online": True}
+        except Exception:
+            return {"status": "desconectado", "online": False}
+    return {"status": "desconectado", "online": False}
 
 
 def enviar_replica(hospital, data):
-    url = f"{HOSPITALS[hospital]}/replica"
-    try:
-        resp = requests.post(url, json=data, timeout=TIMEOUT)
-        if resp.status_code == 201:
-            return resp.json()
-        return {"error": f"Replica rechazada por {hospital}"}
-    except (requests.ConnectionError, requests.Timeout) as e:
-        return {"error": f"No se pudo replicar en {hospital}: {str(e)}"}
+    if hospital == "LPZ":
+        try:
+            execute_openquery_insert(
+                "replica_critica",
+                ["id_paciente", "hospital_origen", "tipo_sangre",
+                 "alergias", "enfermedades_cronicas"],
+                (
+                    data["id_paciente"],
+                    data.get("hospital_origen", "CBBA"),
+                    data.get("tipo_sangre"),
+                    data.get("alergias"),
+                    data.get("enfermedades_cronicas")
+                )
+            )
+            return {"mensaje": f"Replica almacenada en {hospital}"}
+        except Exception as e:
+            return {"error": f"No se pudo replicar en {hospital}: {str(e)}"}
+    return {"error": f"STCZ no implementado"}

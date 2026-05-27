@@ -11,3 +11,13 @@ SQL_SERVER = {
     "password": "1234",
     "driver": "{ODBC Driver 17 for SQL Server}"
 }
+
+LPZ_LINKED_SERVER = "LPZ_POSTGRES"
+
+LPZ_POSTGRES = {
+    "host": "26.10.1.5",
+    "port": 5432,
+    "database": "hospital_lpz",
+    "user": "postgres",
+    "password": "admin"
+}

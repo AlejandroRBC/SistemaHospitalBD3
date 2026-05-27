@@ -38,3 +38,39 @@ def check_connection():
         return True
     except Exception:
         return False
+
+
+def execute_openquery(inner_sql, linked_server=None):
+    from config import LPZ_LINKED_SERVER
+
+    ls = linked_server or LPZ_LINKED_SERVER
+    escaped = inner_sql.replace("'", "''")
+    full_sql = f"SELECT * FROM OPENQUERY({ls}, '{escaped}')"
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(full_sql)
+    try:
+        rows = cur.fetchall()
+    except pyodbc.ProgrammingError:
+        rows = []
+    conn.commit()
+    cur.close()
+    conn.close()
+    return rows
+
+
+def execute_openquery_insert(table, columns, values, linked_server=None):
+    from config import LPZ_LINKED_SERVER
+
+    ls = linked_server or LPZ_LINKED_SERVER
+    cols = ", ".join(columns)
+    placeholders = ", ".join(["?" for _ in values])
+    inner = f"SELECT {cols} FROM {table} WHERE 1=0"
+    escaped = inner.replace("'", "''")
+    full_sql = f"INSERT OPENQUERY({ls}, '{escaped}') VALUES ({placeholders})"
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(full_sql, values)
+    conn.commit()
+    cur.close()
+    conn.close()
