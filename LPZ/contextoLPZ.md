@@ -40,7 +40,7 @@ Instalar:
 pip install flask psycopg2 requests
 ```
 
-## guardalo en requirements.txt
+guardalo en requirements.txt
 
 # Estructura recomendada del proyecto
 
