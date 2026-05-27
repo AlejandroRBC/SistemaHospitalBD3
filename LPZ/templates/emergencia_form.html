@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block titulo %}Registrar Emergencia{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card shadow border-danger">
+      <div class="card-header bg-danger text-white"><h5 class="mb-0"><i class="bi bi-heart-pulse-fill"></i> Registrar Emergencia — LPZ</h5></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('nueva_emergencia') }}">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-bold">Paciente <span class="text-danger">*</span></label>
+              <select name="id_paciente" class="form-select" required>
+                <option value="">— Seleccionar paciente local —</option>
+                {% for p in pacientes %}
+                <option value="{{ p.id_paciente }}">{{ p.apellido }}, {{ p.nombre }}</option>
+                {% endfor %}
+              </select>
+              <small class="text-muted">Para pacientes de otros nodos, primero use <a href="{{ url_for('buscar_nacional') }}">Búsqueda Nacional</a>.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Fecha</label>
+              <input type="date" name="fecha" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Hora</label>
+              <input type="time" name="hora" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Tipo de Emergencia</label>
+              <select name="tipo_emergencia" class="form-select">
+                <option>Trauma / Accidente</option>
+                <option>Paro Cardiorrespiratorio</option>
+                <option>ACV / Derrame</option>
+                <option>Crisis Asmática</option>
+                <option>Hipoglicemia</option>
+                <option>Intoxicación</option>
+                <option>Quemadura</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Estado del Paciente</label>
+              <select name="estado_paciente" class="form-select">
+                <option>Crítico</option>
+                <option>Grave</option>
+                <option>Moderado</option>
+                <option>Estable</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Observaciones</label>
+              <textarea name="observaciones" class="form-control" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-danger"><i class="bi bi-save"></i> Registrar</button>
+            <a href="{{ url_for('emergencias') }}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

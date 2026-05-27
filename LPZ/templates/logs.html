@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block titulo %}Logs Distribuidos{% endblock %}
+{% block content %}
+<h3><i class="bi bi-journal-text"></i> Logs de Operaciones Distribuidas</h3>
+<p class="text-muted">Historial de operaciones entre nodos registradas por el mediador LPZ.</p>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-sm table-hover mb-0">
+      <thead><tr><th>Timestamp</th><th>Acción</th><th>Origen</th><th>Destino</th><th>ID Paciente</th><th>Estado</th><th>Detalles</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td><small>{{ log.timestamp }}</small></td>
+          <td><code>{{ log.accion }}</code></td>
+          <td><span class="nodo-badge">{{ log.nodo_origen or '—' }}</span></td>
+          <td><span class="badge bg-secondary">{{ log.nodo_destino or '—' }}</span></td>
+          <td>{{ log.id_paciente or '—' }}</td>
+          <td>
+            {% if log.estado == 'OK' %}<span class="badge bg-success">OK</span>
+            {% else %}<span class="badge bg-danger">{{ log.estado }}</span>{% endif %}
+          </td>
+          <td><small>{{ log.detalles or '—' }}</small></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Sin logs registrados aún.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

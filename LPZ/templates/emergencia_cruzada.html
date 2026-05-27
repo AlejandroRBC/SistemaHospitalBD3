@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block titulo %}Emergencia Cruzada{% endblock %}
+{% block content %}
+<div class="alert alert-danger border-2">
+  <h4><i class="bi bi-exclamation-triangle-fill"></i> ATENCIÓN DE EMERGENCIA CRUZADA</h4>
+  <p class="mb-0">Datos críticos recuperados por el nodo mediador LPZ. Fuente: <strong>{{ fuente }}</strong></p>
+</div>
+
+{% if historial %}
+<div class="card border-danger shadow mb-3">
+  <div class="card-header bg-danger text-white fs-5">
+    <i class="bi bi-shield-fill-exclamation"></i> Datos Vitales Críticos — Paciente ID {{ id_paciente }}
+    {% if paciente %} · {{ paciente.nombre }} {{ paciente.apellido }}{% endif %}
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4 text-center">
+        <div class="display-4 fw-bold text-danger">{{ historial.tipo_sangre or '?' }}</div>
+        <div class="text-muted">Tipo de Sangre</div>
+      </div>
+      <div class="col-md-4">
+        <h6 class="text-danger">⚠ Alergias</h6>
+        <p class="fs-5 fw-bold">{{ historial.alergias or 'Ninguna registrada' }}</p>
+      </div>
+      <div class="col-md-4">
+        <h6 class="text-warning">Enfermedades Crónicas</h6>
+        <p>{{ historial.enfermedades_cronicas or 'Ninguna registrada' }}</p>
+      </div>
+    </div>
+    <hr>
+    <div class="alert alert-warning mb-0">
+      <strong>Fuente de datos:</strong> {{ fuente }}
+      {% if 'replica_local' in fuente %} — <em>Datos obtenidos de réplica local (nodo LPZ no disponible)</em>{% endif %}
+      {% if 'remoto' in fuente %} — <em>Datos obtenidos en tiempo real del nodo remoto</em>{% endif %}
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-circle"></i> No se pudieron obtener datos críticos del paciente ID {{ id_paciente }}.
+  El nodo de origen no está disponible y no existe réplica local.
+</div>
+{% endif %}
+
+{% if paciente %}
+<div class="card shadow-sm">
+  <div class="card-header card-header-nodo">Datos de Identificación del Paciente</div>
+  <div class="card-body">
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Nombre</dt><dd class="col-sm-9">{{ paciente.nombre }} {{ paciente.apellido }}</dd>
+      <dt class="col-sm-3">CI</dt><dd class="col-sm-9">{{ paciente.ci }}</dd>
+      <dt class="col-sm-3">Teléfono</dt><dd class="col-sm-9">{{ paciente.telefono or '—' }}</dd>
+      <dt class="col-sm-3">Dirección</dt><dd class="col-sm-9">{{ paciente.direccion or '—' }}</dd>
+    </dl>
+  </div>
+</div>
+{% endif %}
+
+<div class="mt-3">
+  <a href="{{ url_for('buscar_nacional') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Nueva Búsqueda</a>
+  <a href="{{ url_for('nueva_emergencia') }}" class="btn btn-danger ms-2"><i class="bi bi-heart-pulse-fill"></i> Registrar Emergencia</a>
+</div>
+{% endblock %}

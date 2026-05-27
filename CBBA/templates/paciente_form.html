@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block titulo %}Nuevo Paciente{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow">
+      <div class="card-header card-header-nodo"><h5 class="mb-0"><i class="bi bi-person-plus-fill"></i> Registrar Nuevo Paciente — Nodo CBBA</h5></div>
+      <div class="card-body">
+        <div class="alert alert-info py-2">
+          <small><i class="bi bi-info-circle"></i> Al registrar, los datos críticos (tipo sangre, alergias, enf. crónicas) se enviarán automáticamente al nodo mediador LPZ y serán replicados en STCZ.</small>
+        </div>
+        <form method="POST" action="{{ url_for('nuevo_paciente') }}">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Apellido <span class="text-danger">*</span></label>
+              <input type="text" name="apellido" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">CI <span class="text-danger">*</span></label>
+              <input type="text" name="ci" class="form-control" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Fecha Nacimiento</label>
+              <input type="date" name="fecha_nacimiento" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Sexo</label>
+              <select name="sexo" class="form-select">
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Dirección</label>
+              <input type="text" name="direccion" class="form-control">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Teléfono</label>
+              <input type="text" name="telefono" class="form-control">
+            </div>
+            <hr class="my-1">
+            <h6 class="text-danger"><i class="bi bi-shield-fill-exclamation"></i> Datos Clínicos Críticos (se replican)</h6>
+            <div class="col-md-4">
+              <label class="form-label fw-bold">Tipo de Sangre <span class="text-danger">*</span></label>
+              <select name="tipo_sangre" class="form-select" required>
+                <option value="">— Seleccionar —</option>
+                {% for ts in ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+                <option value="{{ ts }}">{{ ts }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-bold">Alergias</label>
+              <input type="text" name="alergias" class="form-control" placeholder="Ej: Penicilina — o 'Ninguna'">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Enfermedades Crónicas</label>
+              <input type="text" name="enfermedades_cronicas" class="form-control">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-bold">Antecedentes</label>
+              <textarea name="antecedentes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save"></i> Registrar Paciente</button>
+            <a href="{{ url_for('pacientes') }}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

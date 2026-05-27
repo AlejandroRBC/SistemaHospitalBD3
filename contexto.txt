@@ -1,0 +1,211 @@
+genera 3 versiones de un sistema divididas en 3 carpetas, STCZ, LPZ, CBBA, cambia los colores de cada sistema segun el color de sus banderas
+
+la Vista desde La Paz que usara una gestor de base de datos postgres, CBBA que usara SQL Server como tambn santa cruz, cada sistema debe ser independiente entre si, la red que usaremos sera radminvpn para poder comunicarnos, y los sistemas seran desarrollados en flask y postgres ODBC 16
+
+El proyecto consiste en desarrollar un prototipo académico de un Sistema Hospitalario Distribuido utilizando 3 computadoras. Cada computadora representa una sede hospitalaria distinta:
+
+- La Paz (LPZ)
+- Cochabamba (CBBA)
+- Santa Cruz (STCZ)
+
+El objetivo principal NO es crear un sistema hospitalario real de producción, sino demostrar conceptos de:
+
+- bases de datos distribuidas
+- fragmentación horizontal
+- consultas distribuidas
+- nodo mediador
+- replicación parcial
+- comunicación entre máquinas
+- tolerancia básica a fallos
+
+Todo el sistema funcionará únicamente en entorno local entre las máquinas conectadas por RadminVPN.
+
+
+la conexion entre las bases de datos se debe de hacer con linkedserver donde la paz sera la sede mediadora y central, la base de datos principal es la siguiente es la siguiente:
+
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity Paciente {
+    *id_paciente : INT
+    --
+    nombre : VARCHAR
+    apellido : VARCHAR
+    ci : VARCHAR
+    fecha_nacimiento : DATE
+    sexo : VARCHAR
+    direccion : VARCHAR
+    telefono : VARCHAR
+    tipo_sangre : VARCHAR
+    alergias : TEXT
+}
+
+entity Hospital {
+    *id_hospital : INT
+    --
+    nombre : VARCHAR
+    ciudad : VARCHAR
+    direccion : VARCHAR
+    telefono : VARCHAR
+}
+
+entity Doctor {
+    *id_doctor : INT
+    --
+    nombre : VARCHAR
+    apellido : VARCHAR
+    especialidad : VARCHAR
+    telefono : VARCHAR
+    correo : VARCHAR
+}
+
+entity Consulta {
+    *id_consulta : INT
+    --
+    fecha : DATE
+    hora : TIME
+    motivo : TEXT
+    diagnostico : TEXT
+}
+
+entity Historial_Clinico {
+    *id_historial : INT
+    --
+    fecha_apertura : DATE
+    antecedentes : TEXT
+    enfermedades_cronicas : TEXT
+    observaciones : TEXT
+}
+
+entity Emergencia {
+    *id_emergencia : INT
+    --
+    fecha : DATE
+    hora : TIME
+    tipo_emergencia : VARCHAR
+    estado_paciente : VARCHAR
+    observaciones : TEXT
+}
+
+entity Receta {
+    *id_receta : INT
+    --
+    fecha : DATE
+    indicaciones : TEXT
+}
+
+entity Medicamento {
+    *id_medicamento : INT
+    --
+    nombre : VARCHAR
+    descripcion : TEXT
+    dosis : VARCHAR
+    fabricante : VARCHAR
+}
+
+entity Transferencias_Hospitalarias {
+    *id_transferencia : INT
+    --
+    fecha_transferencia : DATE
+    motivo : TEXT
+    estado : VARCHAR
+}
+
+'========================
+' RELACIONES
+'========================
+
+Paciente ||--|| Historial_Clinico : posee
+
+Paciente ||--o{ Consulta : realiza
+Doctor ||--o{ Consulta : atiende
+Hospital ||--o{ Consulta : registra
+
+Paciente ||--o{ Emergencia : presenta
+Hospital ||--o{ Emergencia : atiende
+
+Consulta ||--o{ Receta : genera
+
+Receta }o--o{ Medicamento : contiene
+
+Paciente ||--o{ Transferencias_Hospitalarias : es_transferido
+
+Hospital ||--o{ Transferencias_Hospitalarias : origen
+Hospital ||--o{ Transferencias_Hospitalarias : destino
+
+Doctor ||--o{ Historial_Clinico : actualiza
+
+@enduml
+
+
+las fragmentaciones que se deben de hacer son las siguientes
+
+
+A continuación, te detallo las definiciones clave extraídas directamente de tus archivos:
+
+ 1\. El Contexto de la Problemática
+
+Definen el problema central a resolver a nivel país: el aislamiento de la información médica. Los hospitales regionales operan con sistemas independientes, lo que causa demoras críticas en la atención, riesgo de errores médicos por falta de antecedentes (como alergias o tipo de sangre) y duplicación de registros de pacientes cuando estos se trasladan o sufren accidentes fuera de su ciudad de origen.
+
+ 2\. Definición del Nodo Mediador (Esquema Mediador-Envoltorio)
+
+Determinan que el Hospital Central de La Paz actuará como el nodo coordinador o enrutador central. Su función no consiste en almacenar de manera centralizada el historial clínico de toda Bolivia, sino en saber en qué lugar del país reside la información y cómo solicitarla. Para ello, definen tres componentes de software:
+
+\ Catálogo Global de Fragmentación (Diccionario de Datos): Base de datos liviana en La Paz que contiene las reglas de distribución geográfica (sabe qué rangos de IDs o códigos pertenecen a cada departamento).
+
+\ Procesador de Consultas Distribuidas (Query Optimizer): El motor que recibe la solicitud del usuario, consulta las reglas del Catálogo y divide la petición en sub-consultas eficientes.
+
+\ Envolvedores (Wrappers / Adaptadores): "Traductores" de dialecto SQL que interactúan entre los distintos motores (PostgreSQL en La Paz y SQL Server en Cochabamba y Santa Cruz), permitiendo la interoperabilidad.
+
+  
+
+ 3\. Definición de los Tipos de Fragmentación Aplicados
+
+En los bocetos del proyecto establecen formalmente cómo se dividen las tablas lógicas del sistema:
+
+ A. Fragmentación Horizontal Primaria (Por Región Geográfica)
+
+Se define como la división de una tabla por filas en base a una condición lógica. Las tuplas se guardan en sus nodos de origen correspondientes.
+
+\ Tabla Paciente: Se fragmenta utilizando el atributo idhospital o la ciudad de origen. (Ej: Fragmento LP para La Paz, Fragmento CB para Cochabamba, Fragmento SC para Santa Cruz).
+
+\ Tabla Doctor: Fragmentada horizontalmente según el idhospital de trabajo formal asignado al médico.
+
+ B. Fragmentación Horizontal Derivada
+
+Definida como la división de tablas secundarias que no se separan por un atributo propio, sino "heredando" la condición de una tabla padre. Esto garantiza la co-ubicación física de datos relacionados en el mismo servidor.
+
+\ Tabla Consulta: Hereda la fragmentación del Paciente o Hospital.
+
+\ Tabla Emergencia: Hereda la división del Hospital que atiende el hecho. Si un paciente paceño se accidenta en Santa Cruz, la emergencia se queda físicamente en el nodo de Santa Cruz.
+
+\ Tabla Receta: Hereda de Consulta.
+
+\ Tabla TransferenciasHospitalarias: Hereda del HospitalOrigen para mantener la auditoría local en la sede remitente.
+
+ C. Fragmentación Híbrida (Mixta)
+
+Definida como la combinación secuencial de fragmentación vertical y luego horizontal para optimizar rendimiento ante campos de texto masivos.
+
+\ Tabla HistorialClinico: Primero se aplica una Fragmentación Vertical para separar las columnas livianas/urgentes de las pesadas:
+
+1\. Parte 1 (Crítica/Emergencias): Atributos de consulta rápida como tipo de sangre, alergias y enfermedades crónicas.
+
+2\. Parte 2 (Detalle/Evolución): Atributos pesados de tipo TEXT como observaciones largas y fecha de apertura.
+
+   Posteriormente, sobre la Parte 1 se aplica la Fragmentación Horizontal para distribuirla por región. Esto permite enviar datos clínicos críticos por la red en menos de 3 segundos ante una emergencia sin arrastrar las notas pesadas de evolución, las cuales se quedan fijas en su nodo de origen.
+
+ D. Sin Fragmentación (Réplica Completa / Catálogos)
+
+\ Tabla Medicamento y Tabla Hospital: Definidos como catálogos nacionales estandarizados. No se fragmentan; se mantiene una copia idéntica y síncrona en los 3 nodos de la red para evitar que el sistema tenga que consultar a través de internet cada vez que se emite una receta o se valida una clínica.
+
+  
+
+ 4\. Definición de Estrategias de Réplica para Tolerancia a Fallos
+
+Establecen dos tipos de comportamiento para cuando la red nacional sufra caídas o latencia alta:
+
+\ Réplica Completa Síncrona: Exclusiva para las tablas estáticas (Medicamento y Hospital). Cualquier alta en el nodo central se propaga inmediatamente a las sedes.
+
+\ Réplica Parcial Asíncrona (Fragmentos Calientes): Cada nodo guarda en segundo plano una copia de respaldo de "solo lectura" de los fragmentos críticos de Paciente e HistorialClinico (alergias y tipo de sangre) de las otras regiones. Su objetivo es que si el enlace de red entre ciudades se corta por completo, el hospital local aún sea capaz de consultar los antecedentes críticos para salvar la vida de un paciente accidentado que pertenezca a otra ciudad.

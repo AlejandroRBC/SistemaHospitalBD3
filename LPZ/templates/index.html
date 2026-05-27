@@ -1,169 +1,93 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hospital La Paz - LPZ</title>
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="header">
-        <div class="header-bar top-bar"></div>
-        <div class="header-content">
-            <div class="shield">⚕️</div>
-            <div>
-                <h1>Hospital La Paz</h1>
-                <p class="subtitle">Nodo Mediador del Sistema Hospitalario Distribuido</p>
-            </div>
-        </div>
-        <div class="header-bar bottom-bar"></div>
+{% extends 'base.html' %}
+{% block titulo %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2><i class="bi bi-speedometer2"></i> Dashboard — {{ hospital }}</h2>
+  <span class="badge fs-6 px-3 py-2" style="background:#B22222;color:#FFD700;">NODO MEDIADOR · LPZ</span>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.pacientes }}</div>
+        <div class="text-muted small"><i class="bi bi-people-fill"></i> Pacientes locales</div>
+      </div>
     </div>
-
-    <div class="container">
-        <div class="card conexiones-card">
-            <h2>Estado de Conexiones</h2>
-            <div class="conexiones-grid">
-                <div class="conexion-card" data-node="LPZ">
-                    <div class="conexion-indicator checking"></div>
-                    <div class="conexion-info">
-                        <h3>La Paz</h3>
-                        <p class="conexion-role">Mediador</p>
-                        <p class="conexion-db">PostgreSQL</p>
-                    </div>
-                    <div class="conexion-status">
-                        <span class="conexion-text">Verificando...</span>
-                    </div>
-                </div>
-                <div class="conexion-card" data-node="CBBA">
-                    <div class="conexion-indicator checking"></div>
-                    <div class="conexion-info">
-                        <h3>Cochabamba</h3>
-                        <p class="conexion-role">Regional</p>
-                        <p class="conexion-db">SQL Server</p>
-                    </div>
-                    <div class="conexion-status">
-                        <span class="conexion-text">Verificando...</span>
-                    </div>
-                </div>
-                <div class="conexion-card" data-node="STCZ">
-                    <div class="conexion-indicator checking"></div>
-                    <div class="conexion-info">
-                        <h3>Santa Cruz</h3>
-                        <p class="conexion-role">Regional</p>
-                        <p class="conexion-db">SQL Server</p>
-                    </div>
-                    <div class="conexion-status">
-                        <span class="conexion-text">Verificando...</span>
-                    </div>
-                </div>
-            </div>
-            <p class="conexion-timestamp">&uacute;ltima verificaci&oacute;n: <span id="timestamp">--</span></p>
-        </div>
-
-        <div class="card">
-            <h2>Endpoints del Nodo</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>M&eacute;todo</th>
-                        <th>Ruta</th>
-                        <th>Descripci&oacute;n</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><span class="method get">GET</span></td>
-                        <td><code>/estado</code></td>
-                        <td>Estado de salud del nodo</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method get">GET</span></td>
-                        <td><code>/paciente/&lt;id&gt;</code></td>
-                        <td>Buscar paciente local</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method get">GET</span></td>
-                        <td><code>/pacientes</code></td>
-                        <td>Listar todos los pacientes</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method post">POST</span></td>
-                        <td><code>/paciente</code></td>
-                        <td>Registrar nuevo paciente</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method get">GET</span></td>
-                        <td><code>/historial/&lt;id&gt;</code></td>
-                        <td>Historial cl&iacute;nico local</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method get">GET</span></td>
-                        <td><code>/buscar_paciente/&lt;id&gt;</code></td>
-                        <td>Consulta distribuida (mediador)</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method post">POST</span></td>
-                        <td><code>/replica</code></td>
-                        <td>Recibir r&eacute;plica cr&iacute;tica</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+  </div>
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.consultas }}</div>
+        <div class="text-muted small"><i class="bi bi-clipboard2-pulse"></i> Consultas</div>
+      </div>
     </div>
-
-    <div class="footer">
-        <div class="footer-bar top-bar"></div>
-        <p>Sistema Hospitalario Distribuido &mdash; Proyecto Acad&eacute;mico</p>
-        <div class="footer-bar bottom-bar"></div>
+  </div>
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.emergencias }}</div>
+        <div class="text-muted small"><i class="bi bi-heart-pulse-fill"></i> Emergencias</div>
+      </div>
     </div>
+  </div>
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.doctores }}</div>
+        <div class="text-muted small"><i class="bi bi-person-badge"></i> Doctores</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.replicas }}</div>
+        <div class="text-muted small"><i class="bi bi-cloud-arrow-down"></i> Réplicas recibidas</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-lg-2">
+    <div class="card stat-card shadow-sm">
+      <div class="card-body text-center">
+        <div class="stat-value">{{ stats.logs }}</div>
+        <div class="text-muted small"><i class="bi bi-journal-text"></i> Logs distribuidos</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<script>
-function verificarConexiones() {
-    fetch('/check_conexiones')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var now = new Date();
-            var timeStr = now.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('timestamp').textContent = timeStr;
-
-            var nodos = ['LPZ', 'CBBA', 'STCZ'];
-            var nombres = { LPZ: 'La Paz', CBBA: 'Cochabamba', STCZ: 'Santa Cruz' };
-            var todosConectados = true;
-
-            nodos.forEach(function(n) {
-                var card = document.querySelector('.conexion-card[data-node="' + n + '"]');
-                if (!card) return;
-                var indicator = card.querySelector('.conexion-indicator');
-                var text = card.querySelector('.conexion-text');
-
-                var info = data[n];
-                if (info && info.online) {
-                    indicator.className = 'conexion-indicator connected';
-                    text.textContent = 'CONECTADO';
-                    text.className = 'conexion-text connected';
-                } else {
-                    indicator.className = 'conexion-indicator disconnected';
-                    text.textContent = 'DESCONECTADO';
-                    text.className = 'conexion-text disconnected';
-                    todosConectados = false;
-                }
-            });
-        })
-        .catch(function() {
-            document.querySelectorAll('.conexion-card').forEach(function(card) {
-                var indicator = card.querySelector('.conexion-indicator');
-                var text = card.querySelector('.conexion-text');
-                indicator.className = 'conexion-indicator disconnected';
-                text.textContent = 'SIN VERIFICACION';
-                text.className = 'conexion-text disconnected';
-            });
-            document.getElementById('timestamp').textContent = 'Error de conexion';
-        });
-}
-
-verificarConexiones();
-setInterval(verificarConexiones, 10000);
-</script>
-
-</body>
-</html>
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header card-header-nodo">
+        <i class="bi bi-diagram-3"></i> Arquitectura del Nodo Mediador
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><strong>Motor local:</strong> PostgreSQL 16</li>
+          <li class="list-group-item"><strong>Rol:</strong> Mediador Central / Coordinador</li>
+          <li class="list-group-item"><strong>Catálogo de fragmentación:</strong> <span class="badge bg-success">Activo</span></li>
+          <li class="list-group-item"><strong>Nodos remotos:</strong> CBBA (SQL Server) · STCZ (SQL Server)</li>
+          <li class="list-group-item"><strong>Red:</strong> RadminVPN</li>
+          <li class="list-group-item"><strong>Puerto Flask:</strong> 5000</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header card-header-nodo">
+        <i class="bi bi-lightning-fill"></i> Acciones Rápidas
+      </div>
+      <div class="card-body d-grid gap-2">
+        <a href="{{ url_for('nuevo_paciente') }}" class="btn btn-primary"><i class="bi bi-person-plus-fill"></i> Registrar Paciente</a>
+        <a href="{{ url_for('nueva_emergencia') }}" class="btn btn-danger"><i class="bi bi-heart-pulse-fill"></i> Registrar Emergencia</a>
+        <a href="{{ url_for('buscar_nacional') }}" class="btn btn-warning text-dark"><i class="bi bi-globe-americas"></i> Búsqueda Nacional (Todos los Nodos)</a>
+        <a href="{{ url_for('nueva_consulta') }}" class="btn btn-outline-primary"><i class="bi bi-clipboard2-plus"></i> Nueva Consulta</a>
+        <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary"><i class="bi bi-journal-text"></i> Ver Logs Distribuidos</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

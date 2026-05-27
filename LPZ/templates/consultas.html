@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block titulo %}Consultas{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3><i class="bi bi-clipboard2-pulse"></i> Consultas — Fragmento LPZ</h3>
+  <a href="{{ url_for('nueva_consulta') }}" class="btn btn-primary"><i class="bi bi-clipboard2-plus"></i> Nueva Consulta</a>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead><tr><th>ID</th><th>Fecha</th><th>Hora</th><th>Paciente</th><th>Médico</th><th>Motivo</th><th>Diagnóstico</th></tr></thead>
+      <tbody>
+        {% for c in consultas %}
+        <tr>
+          <td><code>{{ c.id_consulta }}</code></td>
+          <td>{{ c.fecha }}</td><td>{{ c.hora }}</td>
+          <td>{{ c.paciente }}</td>
+          <td>{{ c.medico }}</td>
+          <td>{{ c.motivo or '—' }}</td>
+          <td>{{ c.diagnostico or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Sin consultas registradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block titulo %}Nueva Transferencia{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card shadow">
+      <div class="card-header card-header-nodo"><h5 class="mb-0"><i class="bi bi-arrow-left-right"></i> Nueva Transferencia — CBBA</h5></div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('nueva_transferencia') }}">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-bold">Paciente <span class="text-danger">*</span></label>
+              <select name="id_paciente" class="form-select" required>
+                <option value="">— Seleccionar —</option>
+                {% for p in pacientes %}<option value="{{ p.id_paciente }}">{{ p.apellido }}, {{ p.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6"><label class="form-label fw-bold">Fecha</label><input type="date" name="fecha_transferencia" class="form-control"></div>
+            <div class="col-md-6">
+              <label class="form-label fw-bold">Hospital Destino <span class="text-danger">*</span></label>
+              <select name="id_hospital_destino" class="form-select" required>
+                <option value="">— Seleccionar —</option>
+                {% for h in hospitales %}<option value="{{ h.id_hospital }}">{{ h.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-12"><label class="form-label fw-bold">Motivo</label><textarea name="motivo" class="form-control" rows="3"></textarea></div>
+          </div>
+          <div class="mt-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Registrar</button>
+            <a href="{{ url_for('transferencias') }}" class="btn btn-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

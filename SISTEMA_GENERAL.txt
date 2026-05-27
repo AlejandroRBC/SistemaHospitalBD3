@@ -1,0 +1,428 @@
+==============================================================
+SISTEMA HOSPITALARIO DISTRIBUIDO - VISION GENERAL
+BD3 UMSA 2026 | Caso de Estudio N°3
+Integrantes: Alvarez Portugal Luis Gael
+             Bernas Carrisales Alejandro Ramiro
+             Sanchez Quentasi Jose Saul
+==============================================================
+
+1. QUE ES EL SISTEMA
+==============================================================
+
+Es un prototipo academico de base de datos distribuida que
+simula una red hospitalaria nacional compuesta por 3 sedes:
+
+  LPZ  - Hospital Central de La Paz      (PostgreSQL 16)
+  CBBA - Hospital Regional de Cochabamba (SQL Server)
+  STCZ - Hospital del Oriente, Sta Cruz  (SQL Server)
+
+Cada sede es una maquina fisica diferente conectadas por
+RadminVPN (red privada virtual). Cada una corre su propio
+servidor de base de datos y su propio servidor Flask.
+
+El objetivo es demostrar los siguientes conceptos:
+  - Fragmentacion horizontal primaria y derivada
+  - Fragmentacion hibrida (vertical + horizontal)
+  - Replicacion parcial asincrona y completa sincrona
+  - Nodo mediador con esquema Mediador-Envoltorio
+  - Consultas distribuidas entre motores heterogeneos
+  - Tolerancia basica a fallos mediante replicas locales
+  - Linked Servers para interoperabilidad PostgreSQL-SQLServer
+
+
+2. ARQUITECTURA DE LA RED
+==============================================================
+
+Topologia: Estrella con LPZ como nodo central
+
+  [CBBA SQL Server :5001] <----> [LPZ PostgreSQL :5000] <----> [STCZ SQL Server :5002]
+                                        |
+                                   MEDIADOR
+                                 - Catalogo de fragmentacion
+                                 - Procesador de consultas distribuidas
+                                 - Wrappers (traductores SQL)
+                                 - Gestor de replicas
+
+IPs RadminVPN:
+  LPZ  : 26.91.247.115
+  CBBA : 26.8.33.47
+  STCZ : 26.XX.XX.XX (configurar segun la maquina real)
+
+Puertos Flask:
+  LPZ  : 5000
+  CBBA : 5001
+  STCZ : 5002
+
+Conexiones de base de datos entre nodos:
+  LPZ -> CBBA : pyodbc (ODBC Driver 17 for SQL Server)
+  LPZ -> STCZ : pyodbc (ODBC Driver 17 for SQL Server)
+  CBBA -> LPZ : Linked Server LPZ_LINK (PostgreSQL ODBC 16) + HTTP fallback
+  STCZ -> LPZ : Linked Server LPZ_LINK (PostgreSQL ODBC 16) + HTTP fallback
+
+
+3. COMO USAR EL SISTEMA (PASO A PASO)
+==============================================================
+
+ORDEN DE ARRANQUE (importante):
+  1. Arrancar LPZ primero (es el mediador)
+     cd LPZ && python app.py
+  2. Arrancar CBBA
+     cd CBBA && python app.py
+  3. Arrancar STCZ
+     cd STCZ && python app.py
+
+CASO DE USO 1 - Registrar paciente nuevo en CBBA:
+  1. Abrir http://26.8.33.47:5001
+  2. Ir a "Pacientes" -> "Nuevo Paciente"
+  3. Completar formulario con datos incluyendo tipo_sangre y alergias
+  4. El sistema:
+     - Inserta en SQL Server local (hospital_cbba.paciente)
+     - Envia HTTP POST a LPZ /api/replica con datos criticos
+     - Envia HTTP POST a LPZ /api/catalogo/registro
+     - LPZ replica los datos criticos a STCZ via pyodbc
+
+CASO DE USO 2 - Busqueda nacional desde STCZ:
+  1. Abrir http://26.XX.XX.XX:5002
+  2. Ir a "Busqueda Nacional"
+  3. Ingresar CI o nombre del paciente
+  4. El sistema:
+     - Intenta OPENQUERY al Linked Server LPZ_LINK
+     - Si falla: HTTP GET a http://26.91.247.115:5000/api/buscar
+     - LPZ busca en los 3 fragmentos y retorna resultados
+  5. El medico ve resultados con badge LPZ / CBBA / STCZ
+
+CASO DE USO 3 - Emergencia cruzada (paciente LPZ en STCZ):
+  1. Medico de STCZ busca al paciente por CI
+  2. Click en "Ver datos criticos"
+  3. STCZ busca en historial_replica local primero (sin red)
+  4. Si no hay replica: HTTP a LPZ /api/historial_critico/<id>
+  5. Se muestra tipo_sangre + alergias + enfermedades_cronicas
+  6. Medico puede registrar la emergencia en STCZ
+
+CASO DE USO 4 - Nuevo medicamento (replicacion sincrona):
+  1. Solo desde LPZ: ir a Medicamentos -> Agregar Medicamento
+  2. LPZ inserta en PostgreSQL local
+  3. LPZ replica inmediatamente via pyodbc a CBBA y STCZ
+  4. El medicamento aparece en las 3 sedes instantaneamente
+
+
+4. COMO ESTA DISTRIBUIDA LA INFORMACION
+==============================================================
+
+4.1 FRAGMENTACION HORIZONTAL PRIMARIA
+--------------------------------------
+Las tablas paciente y doctor se dividen por filas segun
+el id_hospital del registro:
+
+  id_hospital = 1  ->  Nodo LPZ  (PostgreSQL)  IDs 1-9999
+  id_hospital = 2  ->  Nodo CBBA (SQL Server)   IDs 10000-19999
+  id_hospital = 3  ->  Nodo STCZ (SQL Server)   IDs 20000+
+
+Algebra relacional:
+  F_LPZ  = sigma(id_hospital=1)(PACIENTE)
+  F_CBBA = sigma(id_hospital=2)(PACIENTE)
+  F_STCZ = sigma(id_hospital=3)(PACIENTE)
+  F_LPZ union F_CBBA union F_STCZ = PACIENTE global (completitud)
+  F_LPZ interseccion F_CBBA = vacio (disjuncion)
+
+4.2 FRAGMENTACION HORIZONTAL DERIVADA
+---------------------------------------
+Las tablas que dependen de paciente u hospital heredan
+la fragmentacion de su tabla padre (co-ubicacion de datos):
+
+  consulta            -> hereda de paciente (mismo nodo donde esta el paciente)
+  emergencia          -> hereda del hospital que atiende (donde ocurre el hecho)
+  receta              -> hereda de consulta
+  transferencias_hospitalarias -> hereda del hospital_origen (auditoria local)
+
+Ejemplo: Si Juan Perez (LPZ) se accidenta en Santa Cruz,
+la emergencia se registra FISICAMENTE en STCZ porque el
+hospital que atiende es el de Santa Cruz.
+
+4.3 FRAGMENTACION HIBRIDA (VERTICAL + HORIZONTAL)
+---------------------------------------------------
+La tabla historial_clinico se divide en dos partes:
+
+  V1 (critico/liviano) - se replica entre nodos:
+    id_historial, id_paciente, tipo_sangre, alergias, enfermedades_cronicas
+    -> Se necesita en emergencias sin importar en que ciudad este el paciente
+
+  V2 (detalle/pesado) - queda SOLO en el nodo origen:
+    id_historial, id_paciente, fecha_apertura, antecedentes, observaciones
+    -> Solo se consulta en visitas rutinarias, no viaja por la red
+
+Luego sobre V1 se aplica fragmentacion horizontal:
+  historial_clinico_v1_LPZ  = sigma(id_hospital=1)(V1)  -> LPZ
+  historial_clinico_v1_CBBA = sigma(id_hospital=2)(V1)  -> CBBA
+  historial_clinico_v1_STCZ = sigma(id_hospital=3)(V1)  -> STCZ
+
+4.4 REPLICACION COMPLETA SINCRONA (Catalogos)
+----------------------------------------------
+Las tablas hospital y medicamento son catalogos nacionales.
+No se fragmentan: cada nodo tiene una copia exacta identica.
+
+  hospital    -> copia en LPZ + CBBA + STCZ (mismo contenido)
+  medicamento -> copia en LPZ + CBBA + STCZ (mismo contenido)
+
+Cuando LPZ agrega un medicamento, lo replica de inmediato
+via pyodbc a CBBA y STCZ (sin necesidad de consultar la red
+para saber si "Aspirina 100mg" existe al emitir una receta).
+
+4.5 REPLICACION PARCIAL ASINCRONA (Fragmentos Calientes)
+----------------------------------------------------------
+Cada nodo guarda en su tabla historial_replica una copia
+del fragmento V1 critico de los otros nodos.
+
+  En LPZ: historial_replica contiene V1 de pacientes CBBA y STCZ
+  En CBBA: historial_replica contiene V1 de pacientes LPZ y STCZ
+  En STCZ: historial_replica contiene V1 de pacientes LPZ y CBBA
+
+Esto permite que si LPZ cae completamente, CBBA puede
+atender una emergencia de un paciente de La Paz consultando
+su copia local sin necesidad de conectarse a LPZ.
+
+La sincronizacion se dispara al registrar o actualizar
+el historial de un paciente (no es un cron, es por evento).
+
+
+5. COMO SE USAN LAS TABLAS
+==============================================================
+
+TABLA: paciente
+  Uso: registro central del paciente en su nodo de origen
+  Clave: id_paciente (unico dentro del nodo, rangos separados)
+  Fragmentacion: horizontal primaria por id_hospital
+  Quien escribe: solo el nodo propietario
+  Quien lee: el nodo propietario localmente; otros nodos
+             via busqueda nacional a traves del mediador LPZ
+
+TABLA: historial_clinico_v1
+  Uso: datos vitales urgentes accesibles en emergencias
+  Clave: id_historial, id_paciente (1:1 con paciente)
+  Fragmentacion: hibrida (es la parte vertical liviana,
+                 luego fragmentada horizontalmente)
+  Quien escribe: el nodo propietario; actualiza en origen
+  Quien lee: cualquier nodo (via replica local o red)
+  Se crea: automaticamente al registrar un paciente
+  Se replica: hacia los otros 2 nodos en historial_replica
+
+TABLA: historial_clinico_v2
+  Uso: notas medicas detalladas, antecedentes, evoluciones
+  Clave: id_historial (mismo que V1, join por clave)
+  Fragmentacion: queda SOLO en el nodo origen (no viaja)
+  Quien escribe: medicos del nodo propietario
+  Quien lee: solo el nodo propietario (o via red si se pide)
+  Razon: es TEXT pesado, no tiene sentido replicar ni fragmentar
+
+TABLA: historial_replica
+  Uso: copia local de V1 critico de pacientes de otros nodos
+  Clave: (id_paciente, hospital_origen) unico
+  Quien escribe: LPZ via pyodbc al registrar paciente en CBBA/STCZ
+  Quien lee: el nodo local en emergencias cruzadas
+  Actualizacion: al modificar historial_clinico_v1 en el nodo origen
+
+TABLA: fragment_catalog  (SOLO EN LPZ)
+  Uso: directorio de donde vive cada paciente
+  Clave: id_paciente
+  Campos: nodo ('LPZ'|'CBBA'|'STCZ'), id_hospital
+  Quien escribe: LPZ al registrar su propio paciente;
+                 CBBA y STCZ via HTTP POST /api/catalogo/registro
+  Quien lee: LPZ al resolver consultas distribuidas
+  Es el corazon del nodo mediador: sin este catalogo,
+  LPZ tendria que buscar en los 3 nodos siempre
+
+TABLA: doctor
+  Uso: registro de medicos por sede
+  Fragmentacion: horizontal primaria por id_hospital
+  Simplificacion: cada medico pertenece a UN solo hospital
+  Razon: permite aplicar fragmentacion directa sin relaciones M:N
+
+TABLA: consulta
+  Uso: registro de atenciones medicas
+  Fragmentacion: horizontal derivada de paciente
+  Quien escribe: el nodo donde se atiende la consulta
+  Nota: si un medico de STCZ atiende a un paciente de LPZ
+        en STCZ, la consulta va en STCZ (co-ubicacion)
+
+TABLA: emergencia
+  Uso: registro de emergencias medicas
+  Fragmentacion: horizontal derivada del hospital que atiende
+  Ejemplo: paciente LPZ accidentado en STCZ -> emergencia en STCZ
+
+TABLA: receta
+  Uso: prescripciones medicas
+  Fragmentacion: horizontal derivada de la consulta que la genera
+  Co-ubicada con la consulta en el mismo nodo
+
+TABLA: receta_medicamento
+  Uso: relacion N:M entre receta y medicamento
+  Co-ubicada con la receta
+
+TABLA: transferencias_hospitalarias
+  Uso: registro de traslados de pacientes entre sedes
+  Fragmentacion: horizontal derivada del hospital_origen
+  Razon: la auditoria de "quien envio" queda en el nodo remitente
+  Quien escribe: el nodo que inicia la transferencia
+
+TABLA: hospital
+  Uso: catalogo de los 3 hospitales del sistema
+  Fragmentacion: ninguna, replica completa sincrona
+  Ids: 1=LPZ, 2=CBBA, 3=STCZ (fijos, no cambian)
+  Quien escribe: LPZ (propaga a CBBA y STCZ via pyodbc)
+
+TABLA: medicamento
+  Uso: catalogo nacional de farmacos
+  Fragmentacion: ninguna, replica completa sincrona
+  Ids: 1-10 precargados, se agregan desde LPZ
+  Quien escribe: LPZ (propaga a CBBA y STCZ via pyodbc)
+
+TABLA: distributed_logs  (SOLO EN LPZ)
+  Uso: auditoria de operaciones distribuidas
+  Campos: accion, nodo_origen, nodo_destino, id_paciente, timestamp
+  Se llena: automaticamente por mediator.py en cada operacion
+
+
+6. HETEROGENEIDAD DEL SISTEMA
+==============================================================
+
+El sistema es HETEROGENEO porque usa motores distintos:
+
+  LPZ  -> PostgreSQL 16    (sintaxis: $1, $2, ... ; SERIAL; ILIKE)
+  CBBA -> SQL Server       (sintaxis: ?, ? ; IDENTITY; LIKE)
+  STCZ -> SQL Server       (sintaxis: ?, ? ; IDENTITY; LIKE)
+
+Diferencias importantes que se manejan en el codigo:
+
+  Autoincremento:
+    PostgreSQL: SERIAL o GENERATED ALWAYS AS IDENTITY
+    SQL Server: IDENTITY(inicio, incremento)
+
+  Fecha actual:
+    PostgreSQL: CURRENT_DATE, NOW()
+    SQL Server: CAST(GETDATE() AS DATE), GETDATE()
+
+  Parametros en queries:
+    psycopg2 (PostgreSQL): %s
+    pyodbc   (SQL Server): ?
+
+  Busqueda insensible a mayusculas:
+    PostgreSQL: ILIKE '%texto%'
+    SQL Server: LIKE '%texto%' (case-insensitive por defecto)
+
+  Concatenacion de texto:
+    PostgreSQL: nombre || ' ' || apellido
+    SQL Server: nombre + ' ' + apellido
+
+  Upsert:
+    PostgreSQL: INSERT ... ON CONFLICT DO UPDATE
+    SQL Server: IF EXISTS(...) UPDATE ELSE INSERT
+
+El nodo mediador LPZ actua como WRAPPER:
+  - Recibe consultas en formato estandar
+  - db.py traduce automaticamente segun el nodo destino
+  - El resultado se retorna en formato uniforme (dict Python)
+
+
+7. TOLERANCIA A FALLOS
+==============================================================
+
+ESCENARIO 1: LPZ cae
+  - CBBA y STCZ siguen atendiendo pacientes locales
+  - Busqueda nacional NO disponible (el mediador esta caido)
+  - Emergencias cruzadas: usan historial_replica local si existe
+  - Cuando LPZ vuelve, las replicas pendientes se sincronizan
+    al siguiente registro o actualizacion
+
+ESCENARIO 2: CBBA cae
+  - LPZ y STCZ operan normalmente
+  - Busquedas nacionales: LPZ busca en LPZ y STCZ, reporta
+    error de CBBA en el resultado (errores{} en el response)
+  - Datos de pacientes CBBA: accesibles via historial_replica
+    en LPZ y STCZ para emergencias
+
+ESCENARIO 3: Red entre LPZ y CBBA cortada
+  - CBBA opera localmente sin problemas
+  - Busquedas nacionales desde CBBA fallan por HTTP
+    (si el Linked Server tampoco funciona)
+  - Emergencias cruzadas: historial_replica local salva la situacion
+
+ESCENARIO 4: Linked Server LPZ_LINK no disponible en CBBA
+  - La busqueda nacional hace fallback automatico a HTTP API
+  - Se muestra en pantalla el metodo usado: "HTTP_API"
+  - Si tanto Linked Server como HTTP fallan: se muestra el error
+
+
+8. ORDEN DE CONFIGURACION PARA LA DEMO
+==============================================================
+
+DIA ANTES DE LA PRESENTACION:
+  1. Instalar PostgreSQL 16 en la maquina LPZ
+  2. Instalar SQL Server en las maquinas CBBA y STCZ
+  3. Instalar RadminVPN en las 3 maquinas y unirse a la red
+  4. Verificar IPs de RadminVPN y actualizar config.py en cada nodo
+  5. Instalar Python y dependencias en las 3 maquinas:
+       pip install flask psycopg2-binary pyodbc requests
+  6. Ejecutar scripts SQL en cada maquina
+  7. Instalar psqlODBC 16 en CBBA y STCZ
+  8. Configurar DSN en CBBA y STCZ apuntando a LPZ
+  9. Configurar Linked Server en SQL Server de CBBA y STCZ
+  10. Arrancar LPZ, luego CBBA, luego STCZ
+
+VERIFICACION RAPIDA:
+  - LPZ: http://localhost:5000  (dashboard verde-rojo)
+  - CBBA: http://localhost:5001 (dashboard verde)
+  - STCZ: http://localhost:5002 (dashboard verde oscuro)
+  - Buscar "1234567" desde STCZ -> debe encontrar Juan Perez en LPZ
+  - Ver datos criticos -> debe mostrar "O+" y "Penicilina"
+
+
+9. ESTRUCTURA DE ARCHIVOS
+==============================================================
+
+Caso de Estudio 3/
+├── SISTEMA_GENERAL.txt        <- Este archivo
+├── contexto.txt               <- Especificaciones del proyecto
+├── Sistema Hospitalario Nacional.docx <- Documento academico
+│
+├── LPZ/                       <- Nodo mediador La Paz
+│   ├── app.py                 <- Flask app (rutas + API mediadora)
+│   ├── db.py                  <- Conexiones PostgreSQL y SQL Server remoto
+│   ├── mediator.py            <- Logica distribuida: catalogo, wrappers, replicas
+│   ├── config.py              <- Configuracion IPs, colores, BD
+│   ├── requirements.txt       <- flask, psycopg2-binary, pyodbc, requests
+│   ├── setup_lpz.sql          <- Schema PostgreSQL + datos iniciales
+│   ├── README_LPZ.txt         <- Documentacion del nodo LPZ
+│   └── templates/
+│       ├── base.html          <- Layout (rojo/dorado, bandera La Paz)
+│       ├── index.html         <- Dashboard con stats
+│       ├── pacientes.html     <- Lista pacientes LPZ
+│       ├── paciente_form.html <- Formulario nuevo paciente
+│       ├── paciente_detalle.html <- Detalle + historial + consultas
+│       ├── consultas.html     <- Lista consultas
+│       ├── consulta_form.html <- Formulario nueva consulta
+│       ├── emergencias.html   <- Lista emergencias
+│       ├── emergencia_form.html <- Formulario emergencia
+│       ├── transferencias.html  <- Lista transferencias
+│       ├── transferencia_form.html <- Formulario transferencia
+│       ├── medicamentos.html  <- Catalogo + agregar (solo LPZ puede)
+│       ├── busqueda_nacional.html <- Busqueda en los 3 nodos
+│       ├── emergencia_cruzada.html <- Datos criticos para emergencia
+│       └── logs.html          <- Logs de operaciones distribuidas
+│
+├── CBBA/                      <- Nodo periferico Cochabamba
+│   ├── app.py                 <- Flask app
+│   ├── db.py                  <- Conexion SQL Server local + LPZ via HTTP/LS
+│   ├── config.py              <- Configuracion
+│   ├── requirements.txt       <- flask, pyodbc, requests
+│   ├── setup_cbba.sql         <- Schema SQL Server + Linked Server setup
+│   ├── README_CBBA.txt        <- Documentacion del nodo CBBA
+│   └── templates/             <- Mismo set de paginas (colores verde/blanco)
+│
+└── STCZ/                      <- Nodo periferico Santa Cruz
+    ├── app.py                 <- Flask app
+    ├── db.py                  <- Conexion SQL Server local + LPZ via HTTP/LS
+    ├── config.py              <- Configuracion
+    ├── requirements.txt       <- flask, pyodbc, requests
+    ├── setup_stcz.sql         <- Schema SQL Server + Linked Server setup
+    ├── README_STCZ.txt        <- Documentacion del nodo STCZ
+    └── templates/             <- Mismo set de paginas (colores verde oscuro/teal)

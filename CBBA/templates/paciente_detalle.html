@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block titulo %}{{ paciente.nombre }} {{ paciente.apellido }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3><i class="bi bi-person-badge"></i> {{ paciente.nombre }} {{ paciente.apellido }}</h3>
+  <a href="{{ url_for('pacientes') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header card-header-nodo">Datos del Paciente</div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">ID</dt><dd class="col-sm-8"><code>{{ paciente.id_paciente }}</code></dd>
+          <dt class="col-sm-4">CI</dt><dd class="col-sm-8">{{ paciente.ci }}</dd>
+          <dt class="col-sm-4">Nacimiento</dt><dd class="col-sm-8">{{ paciente.fecha_nacimiento or '—' }}</dd>
+          <dt class="col-sm-4">Sexo</dt><dd class="col-sm-8">{{ paciente.sexo or '—' }}</dd>
+          <dt class="col-sm-4">Dirección</dt><dd class="col-sm-8">{{ paciente.direccion or '—' }}</dd>
+          <dt class="col-sm-4">Teléfono</dt><dd class="col-sm-8">{{ paciente.telefono or '—' }}</dd>
+          <dt class="col-sm-4">Nodo</dt><dd class="col-sm-8"><span class="nodo-badge">CBBA</span></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm border-danger">
+      <div class="card-header bg-danger text-white"><i class="bi bi-shield-fill-exclamation"></i> Historial Crítico V1</div>
+      <div class="card-body">
+        {% if hist_v1 %}
+        <dl class="row mb-0">
+          <dt class="col-sm-5">Tipo de Sangre</dt><dd class="col-sm-7"><span class="badge bg-danger fs-6">{{ hist_v1.tipo_sangre or '—' }}</span></dd>
+          <dt class="col-sm-5">Alergias</dt><dd class="col-sm-7"><span class="text-danger fw-bold">{{ hist_v1.alergias or 'Ninguna' }}</span></dd>
+          <dt class="col-sm-5">Enf. Crónicas</dt><dd class="col-sm-7">{{ hist_v1.enfermedades_cronicas or 'Ninguna' }}</dd>
+        </dl>
+        {% else %}<p class="text-muted">Sin historial crítico.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="card shadow-sm mb-3">
+  <div class="card-header card-header-nodo d-flex justify-content-between">
+    <span><i class="bi bi-file-medical"></i> Historial Clínico V2 (solo en CBBA)</span>
+    <button class="btn btn-sm btn-light" data-bs-toggle="collapse" data-bs-target="#formHistorial">Editar</button>
+  </div>
+  <div class="card-body">
+    {% if hist_v2 %}
+    <dl class="row mb-0">
+      <dt class="col-sm-3">Fecha apertura</dt><dd class="col-sm-9">{{ hist_v2.fecha_apertura or '—' }}</dd>
+      <dt class="col-sm-3">Antecedentes</dt><dd class="col-sm-9">{{ hist_v2.antecedentes or '—' }}</dd>
+      <dt class="col-sm-3">Observaciones</dt><dd class="col-sm-9">{{ hist_v2.observaciones or '—' }}</dd>
+    </dl>
+    {% else %}<p class="text-muted">Sin notas de evolución.</p>{% endif %}
+  </div>
+  <div class="collapse" id="formHistorial">
+    <div class="card-body border-top">
+      <form method="POST" action="{{ url_for('actualizar_historial') }}">
+        <input type="hidden" name="id_paciente" value="{{ paciente.id_paciente }}">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label">Tipo Sangre</label>
+            <select name="tipo_sangre" class="form-select">
+              {% for ts in ['O+','O-','A+','A-','B+','B-','AB+','AB-'] %}
+              <option value="{{ ts }}" {% if hist_v1 and hist_v1.tipo_sangre == ts %}selected{% endif %}>{{ ts }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4"><label class="form-label">Alergias</label><input type="text" name="alergias" class="form-control" value="{{ hist_v1.alergias if hist_v1 else '' }}"></div>
+          <div class="col-md-5"><label class="form-label">Enf. Crónicas</label><input type="text" name="enfermedades_cronicas" class="form-control" value="{{ hist_v1.enfermedades_cronicas if hist_v1 else '' }}"></div>
+          <div class="col-12"><label class="form-label">Antecedentes</label><textarea name="antecedentes" class="form-control" rows="2">{{ hist_v2.antecedentes if hist_v2 else '' }}</textarea></div>
+          <div class="col-12"><label class="form-label">Observaciones</label><textarea name="observaciones" class="form-control" rows="2">{{ hist_v2.observaciones if hist_v2 else '' }}</textarea></div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-save"></i> Guardar y Replicar a LPZ</button>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="card shadow-sm mb-3">
+  <div class="card-header card-header-nodo d-flex justify-content-between">
+    <span><i class="bi bi-clipboard2-pulse"></i> Consultas</span>
+    <a href="{{ url_for('nueva_consulta') }}" class="btn btn-sm btn-light">+ Nueva</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Fecha</th><th>Médico</th><th>Motivo</th><th>Diagnóstico</th></tr></thead>
+      <tbody>
+        {% for c in consultas %}<tr><td>{{ c.fecha }}</td><td>{{ c.medico }}</td><td>{{ c.motivo or '—' }}</td><td>{{ c.diagnostico or '—' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-center text-muted">Sin consultas.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="card shadow-sm">
+  <div class="card-header card-header-nodo d-flex justify-content-between">
+    <span><i class="bi bi-heart-pulse-fill"></i> Emergencias</span>
+    <a href="{{ url_for('nueva_emergencia') }}" class="btn btn-sm btn-danger">+ Registrar</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th>Observaciones</th></tr></thead>
+      <tbody>
+        {% for e in emergencias %}<tr><td>{{ e.fecha }}</td><td>{{ e.tipo_emergencia }}</td><td><span class="badge bg-warning text-dark">{{ e.estado_paciente }}</span></td><td>{{ e.observaciones or '—' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="text-center text-muted">Sin emergencias.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -15,10 +15,9 @@ ctx = {
 
 
 def _notificar_lpz_replica(id_paciente, tipo_sangre, alergias, enfermedades_cronicas):
-    """Envia la replica critica al mediador LPZ via HTTP."""
     db.lpz_post('/api/replica', {
         'id_paciente'          : id_paciente,
-        'hospital_origen'      : 'CBBA',
+        'hospital_origen'      : 'STCZ',
         'id_hospital'          : config.ID_HOSPITAL,
         'tipo_sangre'          : tipo_sangre,
         'alergias'             : alergias,
@@ -27,10 +26,9 @@ def _notificar_lpz_replica(id_paciente, tipo_sangre, alergias, enfermedades_cron
 
 
 def _registrar_en_catalogo_lpz(id_paciente):
-    """Notifica al mediador LPZ que este paciente reside en CBBA."""
     db.lpz_post('/api/catalogo/registro', {
         'id_paciente': id_paciente,
-        'nodo'       : 'CBBA',
+        'nodo'       : 'STCZ',
         'id_hospital': config.ID_HOSPITAL
     })
 
@@ -62,9 +60,7 @@ def nuevo_paciente():
     if request.method == 'POST':
         d = request.form
         pid = db.execute(
-            """INSERT INTO paciente (nombre, apellido, ci, fecha_nacimiento, sexo,
-               direccion, telefono, tipo_sangre, alergias, id_hospital)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            'INSERT INTO paciente (nombre, apellido, ci, fecha_nacimiento, sexo, direccion, telefono, tipo_sangre, alergias, id_hospital) VALUES (?,?,?,?,?,?,?,?,?,?)',
             (d['nombre'], d['apellido'], d['ci'], d['fecha_nacimiento'],
              d['sexo'], d['direccion'], d['telefono'], d['tipo_sangre'],
              d['alergias'], config.ID_HOSPITAL)
@@ -81,7 +77,6 @@ def nuevo_paciente():
             )
         _registrar_en_catalogo_lpz(pid)
         _notificar_lpz_replica(pid, d['tipo_sangre'], d['alergias'], d.get('enfermedades_cronicas', ''))
-        # Tambien replicar a STCZ via LPZ (el mediador propaga)
         flash('Paciente registrado. Datos criticos enviados al nodo mediador LPZ.', 'success')
         return redirect(url_for('paciente_detalle', id_paciente=pid))
     return render_template('paciente_form.html', **ctx)
@@ -96,7 +91,7 @@ def paciente_detalle(id_paciente):
     hist_v1 = db.fetchone('SELECT * FROM historial_clinico_v1 WHERE id_paciente = ?', (id_paciente,))
     hist_v2 = db.fetchone('SELECT * FROM historial_clinico_v2 WHERE id_paciente = ?', (id_paciente,))
     consultas = db.fetchall(
-        'SELECT c.*, d.nombre + \' \' + d.apellido AS medico FROM consulta c JOIN doctor d ON c.id_doctor = d.id_doctor WHERE c.id_paciente = ? ORDER BY c.fecha DESC',
+        "SELECT c.*, d.nombre + ' ' + d.apellido AS medico FROM consulta c JOIN doctor d ON c.id_doctor = d.id_doctor WHERE c.id_paciente = ? ORDER BY c.fecha DESC",
         (id_paciente,)
     )
     emergencias = db.fetchall(
@@ -131,12 +126,7 @@ def actualizar_historial():
 @app.route('/consultas')
 def consultas():
     rows = db.fetchall(
-        """SELECT c.*, p.nombre + ' ' + p.apellido AS paciente,
-                  d.nombre + ' ' + d.apellido AS medico
-           FROM consulta c
-           JOIN paciente p ON c.id_paciente = p.id_paciente
-           JOIN doctor   d ON c.id_doctor   = d.id_doctor
-           ORDER BY c.fecha DESC"""
+        "SELECT c.*, p.nombre + ' ' + p.apellido AS paciente, d.nombre + ' ' + d.apellido AS medico FROM consulta c JOIN paciente p ON c.id_paciente = p.id_paciente JOIN doctor d ON c.id_doctor = d.id_doctor ORDER BY c.fecha DESC"
     )
     return render_template('consultas.html', **ctx, consultas=rows)
 
@@ -162,10 +152,7 @@ def nueva_consulta():
 @app.route('/emergencias')
 def emergencias():
     rows = db.fetchall(
-        """SELECT e.*, p.nombre + ' ' + p.apellido AS paciente
-           FROM emergencia e
-           JOIN paciente p ON e.id_paciente = p.id_paciente
-           ORDER BY e.fecha DESC"""
+        "SELECT e.*, p.nombre + ' ' + p.apellido AS paciente FROM emergencia e JOIN paciente p ON e.id_paciente = p.id_paciente ORDER BY e.fecha DESC"
     )
     return render_template('emergencias.html', **ctx, emergencias=rows)
 
@@ -190,13 +177,7 @@ def nueva_emergencia():
 @app.route('/transferencias')
 def transferencias():
     rows = db.fetchall(
-        """SELECT t.*, p.nombre + ' ' + p.apellido AS paciente,
-                  h1.nombre AS origen, h2.nombre AS destino
-           FROM transferencias_hospitalarias t
-           JOIN paciente p  ON t.id_paciente         = p.id_paciente
-           JOIN hospital h1 ON t.id_hospital_origen  = h1.id_hospital
-           JOIN hospital h2 ON t.id_hospital_destino = h2.id_hospital
-           ORDER BY t.fecha_transferencia DESC"""
+        "SELECT t.*, p.nombre + ' ' + p.apellido AS paciente, h1.nombre AS origen, h2.nombre AS destino FROM transferencias_hospitalarias t JOIN paciente p ON t.id_paciente = p.id_paciente JOIN hospital h1 ON t.id_hospital_origen = h1.id_hospital JOIN hospital h2 ON t.id_hospital_destino = h2.id_hospital ORDER BY t.fecha_transferencia DESC"
     )
     return render_template('transferencias.html', **ctx, transferencias=rows)
 
@@ -234,7 +215,6 @@ def buscar_nacional():
     resultados, error, metodo = [], None, None
 
     if q:
-        # Intentar via Linked Server OPENQUERY primero
         rows_ls, err_ls = db.openquery_lpz(
             f"SELECT id_paciente, nombre, apellido, ci, tipo_sangre, alergias, 'LPZ' AS nodo "
             f"FROM paciente WHERE ci = '{q}' OR nombre || ' ' || apellido ILIKE '%{q}%'"
@@ -243,7 +223,6 @@ def buscar_nacional():
             resultados = rows_ls
             metodo = 'LinkedServer'
         else:
-            # Fallback: HTTP al mediador LPZ
             data, err_http = db.lpz_get('/api/buscar', {'q': q})
             if data and data.get('success'):
                 resultados = data['data']
@@ -257,8 +236,7 @@ def buscar_nacional():
 
 @app.route('/emergencia_cruzada/<int:id_paciente>')
 def emergencia_cruzada(id_paciente):
-    """Consulta datos criticos de paciente externo para emergencia."""
-    # Primero busca en replica local (sin red)
+    """Consulta datos criticos para emergencia. Usa replica local si LPZ no disponible."""
     replica = db.fetchone(
         'SELECT * FROM historial_replica WHERE id_paciente = ?', (id_paciente,)
     )
@@ -266,7 +244,6 @@ def emergencia_cruzada(id_paciente):
     h = replica
 
     if not h:
-        # Si no hay replica, consultar al mediador LPZ via HTTP
         data, err = db.lpz_get(f'/api/historial_critico/{id_paciente}')
         if data and data.get('success'):
             h = data['data']
@@ -282,13 +259,12 @@ def emergencia_cruzada(id_paciente):
 def api_paciente(id_paciente):
     p = db.fetchone('SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,))
     if p:
-        return jsonify({'success': True, 'data': p, 'nodo': 'CBBA'})
+        return jsonify({'success': True, 'data': p, 'nodo': 'STCZ'})
     return jsonify({'success': False, 'error': 'No encontrado'}), 404
 
 
 @app.route('/api/replica', methods=['POST'])
 def api_replica():
-    """Recibe replica critica desde LPZ o STCZ."""
     d = request.get_json()
     existing = db.fetchone(
         'SELECT id_replica FROM historial_replica WHERE id_paciente=? AND hospital_origen=?',
@@ -310,7 +286,7 @@ def api_replica():
 @app.route('/api/health')
 def api_health():
     return jsonify({
-        'nodo'     : 'CBBA',
+        'nodo'     : 'STCZ',
         'estado'   : 'activo',
         'timestamp': datetime.now().isoformat()
     })

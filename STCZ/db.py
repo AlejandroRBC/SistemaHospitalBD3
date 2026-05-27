@@ -3,7 +3,7 @@ import requests
 import config
 
 
-# ── SQL Server local (CBBA) ───────────────────────────────────────────────────
+# ── SQL Server local (STCZ) ───────────────────────────────────────────────────
 
 def _conn():
     cs = (
@@ -36,7 +36,6 @@ def execute(sql, params=None):
     cur  = conn.cursor()
     cur.execute(sql, params or [])
     conn.commit()
-    # Intentar obtener el ID generado (si hay IDENTITY)
     try:
         cur.execute('SELECT SCOPE_IDENTITY()')
         val = cur.fetchone()[0]
@@ -67,7 +66,6 @@ def lpz_post(endpoint, payload):
 
 
 # ── Consulta por Linked Server (OPENQUERY a LPZ PostgreSQL) ──────────────────
-# Requiere que el Linked Server LPZ_LINK este configurado en SQL Server
 
 def openquery_lpz(pg_sql):
     """Ejecuta una consulta en LPZ via OPENQUERY (Linked Server)."""
