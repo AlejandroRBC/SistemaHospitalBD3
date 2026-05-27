@@ -1,0 +1,76 @@
+========================================================================
+ SCRIPT DE CREACION - BASE DE DATOS POSTGRESQL
+ NODO LA PAZ (LPZ) - SISTEMA HOSPITALARIO DISTRIBUIDO
+========================================================================
+
+-- 1. CREAR LA BASE DE DATOS
+-- Ejecutar como superusuario (postgres) en pgAdmin o psql:
+
+CREATE DATABASE hospital_lpz;
+
+-- Una vez creada la BD, conectarse a 'hospital_lpz' y ejecutar lo siguiente:
+
+-- ======================================================================
+-- 2. ESQUEMA DE TABLAS
+-- ======================================================================
+
+CREATE TABLE IF NOT EXISTS paciente (
+    id_paciente SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    tipo_sangre VARCHAR(5),
+    alergias TEXT,
+    enfermedades_cronicas TEXT,
+    id_hospital INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS historial_clinico (
+    id_historial SERIAL PRIMARY KEY,
+    id_paciente INTEGER NOT NULL REFERENCES paciente(id_paciente),
+    observaciones TEXT,
+    fecha TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS replica_critica (
+    id_replica SERIAL PRIMARY KEY,
+    id_paciente INTEGER NOT NULL,
+    hospital_origen VARCHAR(10) NOT NULL,
+    tipo_sangre VARCHAR(5),
+    alergias TEXT,
+    enfermedades_cronicas TEXT
+);
+
+-- ======================================================================
+-- 3. DATOS DE EJEMPLO (SEED)
+-- ======================================================================
+
+INSERT INTO paciente (nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital)
+VALUES
+    ('Juan Perez',     'O+',  'Ninguna',          'Asma',        1),
+    ('Maria Luna',     'A+',  'Penicilina',       'Diabetes',    1),
+    ('Carlos Vargas',  'B+',  'Polen',            'Hipertension',1),
+    ('Ana Condori',    'AB-', 'Ninguna',          'Ninguna',     1),
+    ('Pedro Quispe',   'O-',  'Ibuprofeno',       'Artritis',    1);
+
+INSERT INTO historial_clinico (id_paciente, observaciones, fecha)
+VALUES
+    (1, 'Control de asma. Sintomas controlados.',             '2025-01-15 10:30:00'),
+    (1, 'Revision trimestral. Todo estable.',                 '2025-04-15 11:00:00'),
+    (2, 'Control de diabetes. Ajuste de insulina.',           '2025-02-10 09:00:00'),
+    (3, 'Presion arterial elevada. Se ajusta medicacion.',    '2025-03-05 14:30:00'),
+    (4, 'Examen general sin novedades.',                      '2025-01-20 08:00:00'),
+    (5, 'Dolor articular. Se receta antiinflamatorio.',       '2025-02-28 16:00:00');
+
+-- ======================================================================
+-- 4. VERIFICAR DATOS INSERTADOS
+-- ======================================================================
+
+SELECT 'paciente' AS tabla, COUNT(*) AS registros FROM paciente
+UNION ALL
+SELECT 'historial_clinico', COUNT(*) FROM historial_clinico
+UNION ALL
+SELECT 'replica_critica', COUNT(*) FROM replica_critica;
+
+-- ======================================================================
+-- NOTA: El nodo LPZ usa PostgreSQL como motor de base de datos.
+-- CBBA y STCZ usan SQL Server.
+-- ======================================================================

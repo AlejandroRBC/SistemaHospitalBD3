@@ -1,0 +1,301 @@
+/* Colores del departamento de La Paz */
+:root {
+    --verde: #007A3E;
+    --verde-oscuro: #005A2E;
+    --verde-claro: #E8F5E9;
+    --rojo: #CE1126;
+    --rojo-oscuro: #A80D1F;
+    --rojo-claro: #FFEBEE;
+    --blanco: #FFFFFF;
+    --gris: #F5F5F5;
+    --gris-oscuro: #333333;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--gris);
+    color: var(--gris-oscuro);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.header {
+    background: var(--blanco);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.header-bar {
+    height: 6px;
+}
+
+.top-bar {
+    background: var(--verde);
+}
+
+.bottom-bar {
+    background: var(--rojo);
+}
+
+.header-content {
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.shield {
+    font-size: 48px;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--verde-claro);
+    border-radius: 50%;
+    border: 3px solid var(--verde);
+}
+
+.header h1 {
+    color: var(--verde-oscuro);
+    font-size: 28px;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: var(--rojo);
+    font-weight: 500;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Container */
+.container {
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 0 20px;
+    flex: 1;
+}
+
+/* Cards */
+.card {
+    background: var(--blanco);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-left: 4px solid var(--verde);
+}
+
+.card h2 {
+    color: var(--verde-oscuro);
+    font-size: 20px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--verde-claro);
+}
+
+/* Status Grid */
+.status-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.status-item .label {
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-item .value {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gris-oscuro);
+}
+
+.status-active {
+    color: var(--verde) !important;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--verde-claro);
+    color: var(--verde-oscuro);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #EEE;
+    font-size: 14px;
+}
+
+tr:hover td {
+    background: var(--rojo-claro);
+}
+
+code {
+    background: #F0F0F0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--rojo-oscuro);
+}
+
+.method {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.method.get {
+    background: #E3F2FD;
+    color: #1565C0;
+}
+
+.method.post {
+    background: var(--verde-claro);
+    color: var(--verde-oscuro);
+}
+
+.method.put {
+    background: #FFF3E0;
+    color: #E65100;
+}
+
+.method.delete {
+    background: var(--rojo-claro);
+    color: var(--rojo-oscuro);
+}
+
+/* Node Grid */
+.node-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.node-card {
+    background: var(--blanco);
+    border: 2px solid #E0E0E0;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.node-card:hover {
+    border-color: var(--verde);
+}
+
+.node-card.lpz {
+    border-color: var(--verde);
+    background: var(--verde-claro);
+}
+
+.node-indicator {
+    width: 12px;
+    height: 12px;
+    background: var(--verde);
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    box-shadow: 0 0 6px rgba(0,122,62,0.4);
+}
+
+.node-card h3 {
+    font-size: 16px;
+    color: var(--gris-oscuro);
+    margin-bottom: 4px;
+}
+
+.node-role {
+    font-size: 13px;
+    color: var(--rojo);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.node-db {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Footer */
+.footer {
+    background: var(--blanco);
+    text-align: center;
+    padding: 16px;
+    margin-top: auto;
+}
+
+.footer p {
+    font-size: 13px;
+    color: #888;
+    padding: 8px 0;
+}
+
+.footer-bar {
+    height: 4px;
+}
+
+.footer .top-bar {
+    background: var(--verde);
+}
+
+.footer .bottom-bar {
+    background: var(--rojo);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .node-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .header-content {
+        padding: 16px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+    }
+
+    .container {
+        padding: 0 12px;
+    }
+}

@@ -2,16 +2,32 @@
 
 ## Project status
 
-Prototype in planning phase. **No code written yet** — only design docs exist. The goal is academic: demonstrate distributed DB concepts (horizontal fragmentation, mediator node, partial replication) across 3 machines connected via RadminVPN.
+Active prototype development. **LPZ node fully implemented** (Flask + PostgreSQL). CBBA and STCZ remain as design docs. The goal is academic: demonstrate distributed DB concepts (horizontal fragmentation, mediator node, partial replication) across 3 machines connected via RadminVPN.
 
 ## Repo layout
 
 ```
 SistemaHospitalario/
 ├── ContextoGeneral.md          # Architecture overview (start here)
-├── LaPaz/contextoLaPaz.md      # LPZ = mediator node + local hospital
-├── Cochabamba/contextoCBBA.md  # CBBA = regional node
-├── SantaCruz/contextoSantaCruz.md  # STCZ = regional node
+├── LPZ/                        # La Paz node — mediator + local hospital (IMPLEMENTED)
+│   ├── contextoLPZ.md          # Original design doc
+│   ├── app.py                  # Flask entrypoint
+│   ├── config.py               # PostgreSQL credentials, port
+│   ├── db.py                   # psycopg2 connection helper
+│   ├── hospital_ips.py         # RadminVPN IPs for all nodes
+│   ├── fragment_catalog.py     # Patient-to-hospital mapping
+│   ├── mediator.py             # Distributed query resolution
+│   ├── replication.py          # Partial replication logic
+│   ├── requirements.txt
+│   ├── creacion_postgresql.txt # Full DB creation script
+│   ├── routes/                 # Flask blueprints
+│   ├── services/               # Business logic layer
+│   ├── utils/                  # Response helpers, validators
+│   ├── sql/                    # schema.sql + seed.sql
+│   ├── templates/              # HTML status page (LPZ colors)
+│   └── static/                 # CSS (verde/rojo)
+├── CBBA/contextoCBBA.md        # Cochabamba design doc (not yet coded)
+├── STCZ/contextoSTCZ.md        # Santa Cruz design doc (not yet coded)
 └── AGENTS.md
 ```
 
@@ -31,20 +47,38 @@ SistemaHospitalario/
 - If a node disconnects, the others continue functioning locally.
 - RadminVPN IPs (e.g. `26.x.x.x`), ports, and DB credentials are centralized in `hospital_ips.py` and `config.py` per node — never hardcoded elsewhere.
 
-## Per-node structure (recommended in docs)
-
-Each node follows the same pattern:
+## LPZ node structure (reference for CBBA/STCZ)
 
 ```
-{node}_node/
-├── app.py              # Flask entrypoint
-├── config.py           # DB credentials, port, local hospital name
-├── db.py               # Connection helper
-├── hospital_ips.py     # RadminVPN IPs for all nodes
+LPZ/
+├── app.py                  # Flask entrypoint (registers blueprints, runs on port 5000)
+├── config.py               # DB credentials, port, hospital name
+├── db.py                   # psycopg2 connection + execute_query helper
+├── hospital_ips.py         # RadminVPN IPs dict — only place IPs are defined
+├── fragment_catalog.py     # FRAGMENTS dict: patient_id → hospital
+├── mediator.py             # resolve_patient(): routes query to local or remote
+├── replication.py          # replicate_to_nodes(): sends critical data to CBBA/STCZ
+├── requirements.txt        # flask, psycopg2, requests
+├── creacion_postgresql.txt # Copy-paste SQL script for pgAdmin
 ├── routes/
-├── services/           # lpz_service.py (for CBBA/STCZ) or remote_query_service.py (for LPZ)
+│   ├── estado.py           # GET /estado
+│   ├── pacientes.py        # GET /paciente/<id>, GET /pacientes, POST /paciente
+│   ├── historial.py        # GET /historial/<id>, POST /historial
+│   └── mediador.py         # GET /buscar_paciente/<id>, POST /replica
+├── services/
+│   ├── patient_service.py       # Local DB queries (paciente + historial_clinico)
+│   ├── distributed_service.py   # Distributed lookup orchestration
+│   └── remote_query_service.py  # HTTP client to CBBA/STCZ (requests.get/post)
 ├── utils/
-└── sql/                # schema.sql + seed.sql
+│   ├── response.py         # success_response() / error_response()
+│   └── validators.py       # Field & ID validation
+├── sql/
+│   ├── schema.sql          # PostgreSQL DDL
+│   └── seed.sql            # 5 sample patients + 6 clinical histories
+├── templates/
+│   └── index.html          # Status page with green/red LPZ colors
+└── static/
+    └── style.css           # LPZ color palette (verde #007A3E, rojo #CE1126)
 ```
 
 ## Dependencies

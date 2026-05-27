@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital La Paz - LPZ</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-bar top-bar"></div>
+        <div class="header-content">
+            <div class="shield">⚕️</div>
+            <div>
+                <h1>Hospital La Paz</h1>
+                <p class="subtitle">Nodo Mediador del Sistema Hospitalario Distribuido</p>
+            </div>
+        </div>
+        <div class="header-bar bottom-bar"></div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Estado del Nodo</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <span class="label">Hospital</span>
+                    <span class="value">La Paz (LPZ)</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Rol</span>
+                    <span class="value">Mediador + Hospital Local</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Base de Datos</span>
+                    <span class="value">PostgreSQL</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Estado</span>
+                    <span class="value status-active">● Activo</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Endpoints del Nodo</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>M&eacute;todo</th>
+                        <th>Ruta</th>
+                        <th>Descripci&oacute;n</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/estado</code></td>
+                        <td>Estado de salud del nodo</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/paciente/&lt;id&gt;</code></td>
+                        <td>Buscar paciente local</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/pacientes</code></td>
+                        <td>Listar todos los pacientes</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method post">POST</span></td>
+                        <td><code>/paciente</code></td>
+                        <td>Registrar nuevo paciente</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/historial/&lt;id&gt;</code></td>
+                        <td>Historial cl&iacute;nico local</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/buscar_paciente/&lt;id&gt;</code></td>
+                        <td>Consulta distribuida (mediador)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method post">POST</span></td>
+                        <td><code>/replica</code></td>
+                        <td>Recibir r&eacute;plica cr&iacute;tica</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Nodos del Sistema</h2>
+            <div class="node-grid">
+                <div class="node-card lpz">
+                    <div class="node-indicator"></div>
+                    <h3>La Paz</h3>
+                    <p class="node-role">Mediador</p>
+                    <p class="node-db">PostgreSQL</p>
+                </div>
+                <div class="node-card">
+                    <div class="node-indicator"></div>
+                    <h3>Cochabamba</h3>
+                    <p class="node-role">Regional</p>
+                    <p class="node-db">SQL Server</p>
+                </div>
+                <div class="node-card">
+                    <div class="node-indicator"></div>
+                    <h3>Santa Cruz</h3>
+                    <p class="node-role">Regional</p>
+                    <p class="node-db">SQL Server</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-bar top-bar"></div>
+        <p>Sistema Hospitalario Distribuido &mdash; Proyecto Acad&eacute;mico</p>
+        <div class="footer-bar bottom-bar"></div>
+    </div>
+</body>
+</html>

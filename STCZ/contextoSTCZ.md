@@ -38,6 +38,8 @@ Instalar:
 pip install flask pyodbc requests
 ```
 
+guardalo en requirements.txt
+
 ---
 
 # Estructura recomendada del proyecto
