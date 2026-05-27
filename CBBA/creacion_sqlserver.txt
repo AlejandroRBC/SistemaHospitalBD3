@@ -1,0 +1,84 @@
+========================================================================
+ SCRIPT DE CREACION - BASE DE DATOS SQL SERVER
+ NODO COCHABAMBA (CBBA) - SISTEMA HOSPITALARIO DISTRIBUIDO
+========================================================================
+
+-- 1. CREAR LA BASE DE DATOS
+-- Ejecutar en SQL Server Management Studio (SSMS) o sqlcmd:
+
+CREATE DATABASE hospital_cbba;
+GO
+
+USE hospital_cbba;
+GO
+
+-- ======================================================================
+-- 2. ESQUEMA DE TABLAS
+-- ======================================================================
+
+CREATE TABLE paciente (
+    id_paciente INT PRIMARY KEY IDENTITY(1,1),
+    nombre VARCHAR(100) NOT NULL,
+    tipo_sangre VARCHAR(5),
+    alergias TEXT,
+    enfermedades_cronicas TEXT,
+    id_hospital INTEGER DEFAULT 2
+);
+GO
+
+CREATE TABLE historial_clinico (
+    id_historial INT PRIMARY KEY IDENTITY(1,1),
+    id_paciente INT NOT NULL REFERENCES paciente(id_paciente),
+    observaciones TEXT,
+    fecha DATETIME DEFAULT GETDATE()
+);
+GO
+
+CREATE TABLE replica_critica (
+    id_replica INT PRIMARY KEY IDENTITY(1,1),
+    id_paciente INT NOT NULL,
+    hospital_origen VARCHAR(10) NOT NULL,
+    tipo_sangre VARCHAR(5),
+    alergias TEXT,
+    enfermedades_cronicas TEXT
+);
+GO
+
+-- ======================================================================
+-- 3. DATOS DE EJEMPLO (SEED)
+-- ======================================================================
+
+INSERT INTO paciente (nombre, tipo_sangre, alergias, enfermedades_cronicas, id_hospital)
+VALUES
+    ('Rosa Mamani',   'A-',  'Sulfa',            'Ninguna',      2),
+    ('Luis Fernandez','O+',  'Ninguna',          'Colesterol',   2),
+    ('Sofia Rojas',   'AB+', 'Penicilina',       'Migrana',      2),
+    ('Diego Alarcon', 'B-',  'Frutos secos',     'Ninguna',      2),
+    ('Gabriela Soliz','O+',  'Ninguna',          'Hipotiroidismo',2);
+GO
+
+INSERT INTO historial_clinico (id_paciente, observaciones, fecha)
+VALUES
+    (1, 'Control general. Presion arterial normal.',          '2025-03-10 09:30:00'),
+    (1, 'Analisis de sangre. Resultados estables.',           '2025-05-12 10:00:00'),
+    (2, 'Examen de colesterol. Nivel elevado.',               '2025-02-18 11:00:00'),
+    (3, 'Crisis de migrana. Medicacion recetada.',            '2025-04-22 15:00:00'),
+    (4, 'Revision alergologica sin novedades.',               '2025-01-30 08:30:00'),
+    (5, 'Control de hormona tiroidea. Ajuste de dosis.',      '2025-03-25 14:00:00');
+GO
+
+-- ======================================================================
+-- 4. VERIFICAR DATOS INSERTADOS
+-- ======================================================================
+
+SELECT 'paciente' AS tabla, COUNT(*) AS registros FROM paciente
+UNION ALL
+SELECT 'historial_clinico', COUNT(*) FROM historial_clinico
+UNION ALL
+SELECT 'replica_critica', COUNT(*) FROM replica_critica;
+GO
+
+-- ======================================================================
+-- NOTA: El nodo CBBA usa SQL Server como motor de base de datos.
+-- LPZ usa PostgreSQL. STCZ usa SQL Server.
+-- ======================================================================

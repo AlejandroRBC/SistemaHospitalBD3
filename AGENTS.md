@@ -2,7 +2,7 @@
 
 ## Project status
 
-Active prototype development. **LPZ node fully implemented** (Flask + PostgreSQL). CBBA and STCZ remain as design docs. The goal is academic: demonstrate distributed DB concepts (horizontal fragmentation, mediator node, partial replication) across 3 machines connected via RadminVPN.
+Active prototype development. **LPZ node fully implemented** (Flask + PostgreSQL). **CBBA node fully implemented** (Flask + SQL Server). STCZ remains as a design doc. The goal is academic: demonstrate distributed DB concepts (horizontal fragmentation, mediator node, partial replication) across 3 machines connected via RadminVPN.
 
 ## Repo layout
 
@@ -26,7 +26,21 @@ SistemaHospitalario/
 │   ├── sql/                    # schema.sql + seed.sql
 │   ├── templates/              # HTML status page (LPZ colors)
 │   └── static/                 # CSS (verde/rojo)
-├── CBBA/contextoCBBA.md        # Cochabamba design doc (not yet coded)
+├── CBBA/                       # Cochabamba node — regional (IMPLEMENTED)
+│   ├── contextoCBBA.md          # Original design doc
+│   ├── app.py                  # Flask entrypoint
+│   ├── config.py               # SQL Server credentials, port
+│   ├── db.py                   # pyodbc connection helper
+│   ├── hospital_ips.py         # RadminVPN IPs for all nodes
+│   ├── replication.py          # Partial replication logic
+│   ├── requirements.txt        # flask, pyodbc, requests
+│   ├── creacion_sqlserver.txt  # Full DB creation script for SSMS
+│   ├── routes/                 # Flask blueprints (5 routes)
+│   ├── services/               # Business logic + LPZ communication
+│   ├── utils/                  # Response helpers, validators
+│   ├── sql/                    # schema.sql + seed.sql (SQL Server syntax)
+│   ├── templates/              # HTML status page (CBBA colors)
+│   └── static/                 # CSS (celeste/blanco)
 ├── STCZ/contextoSTCZ.md        # Santa Cruz design doc (not yet coded)
 └── AGENTS.md
 ```
@@ -47,7 +61,7 @@ SistemaHospitalario/
 - If a node disconnects, the others continue functioning locally.
 - RadminVPN IPs (e.g. `26.x.x.x`), ports, and DB credentials are centralized in `hospital_ips.py` and `config.py` per node — never hardcoded elsewhere.
 
-## LPZ node structure (reference for CBBA/STCZ)
+## LPZ node structure (mediator — reference for STCZ)
 
 ```
 LPZ/

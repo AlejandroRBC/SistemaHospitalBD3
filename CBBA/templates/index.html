@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Cochabamba - CBBA</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-bar top-bar"></div>
+        <div class="header-content">
+            <div class="shield">🏥</div>
+            <div>
+                <h1>Hospital Cochabamba</h1>
+                <p class="subtitle">Nodo Regional del Sistema Hospitalario Distribuido</p>
+            </div>
+        </div>
+        <div class="header-bar bottom-bar"></div>
+    </div>
+
+    <div class="container">
+        <div class="card conexiones-card">
+            <h2>Estado de Conexiones</h2>
+            <div class="conexiones-grid">
+                <div class="conexion-card" data-node="CBBA">
+                    <div class="conexion-indicator checking"></div>
+                    <div class="conexion-info">
+                        <h3>Cochabamba</h3>
+                        <p class="conexion-role">Regional</p>
+                        <p class="conexion-db">SQL Server</p>
+                    </div>
+                    <div class="conexion-status">
+                        <span class="conexion-text">Verificando...</span>
+                    </div>
+                </div>
+                <div class="conexion-card" data-node="LPZ">
+                    <div class="conexion-indicator checking"></div>
+                    <div class="conexion-info">
+                        <h3>La Paz</h3>
+                        <p class="conexion-role">Mediador</p>
+                        <p class="conexion-db">PostgreSQL</p>
+                    </div>
+                    <div class="conexion-status">
+                        <span class="conexion-text">Verificando...</span>
+                    </div>
+                </div>
+                <div class="conexion-card" data-node="STCZ">
+                    <div class="conexion-indicator checking"></div>
+                    <div class="conexion-info">
+                        <h3>Santa Cruz</h3>
+                        <p class="conexion-role">Regional</p>
+                        <p class="conexion-db">SQL Server</p>
+                    </div>
+                    <div class="conexion-status">
+                        <span class="conexion-text">Verificando...</span>
+                    </div>
+                </div>
+            </div>
+            <p class="conexion-timestamp">&uacute;ltima verificaci&oacute;n: <span id="timestamp">--</span></p>
+        </div>
+
+        <div class="card">
+            <h2>Endpoints del Nodo</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>M&eacute;todo</th>
+                        <th>Ruta</th>
+                        <th>Descripci&oacute;n</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/estado</code></td>
+                        <td>Estado de salud del nodo</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/paciente/&lt;id&gt;</code></td>
+                        <td>Buscar paciente local</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/pacientes</code></td>
+                        <td>Listar todos los pacientes</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method post">POST</span></td>
+                        <td><code>/paciente</code></td>
+                        <td>Registrar nuevo paciente</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/historial/&lt;id&gt;</code></td>
+                        <td>Historial cl&iacute;nico local</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method get">GET</span></td>
+                        <td><code>/buscar_nacional/&lt;id&gt;</code></td>
+                        <td>Buscar paciente en red nacional (v&iacute;a LPZ)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method post">POST</span></td>
+                        <td><code>/replica</code></td>
+                        <td>Recibir r&eacute;plica cr&iacute;tica</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-bar top-bar"></div>
+        <p>Sistema Hospitalario Distribuido &mdash; Proyecto Acad&eacute;mico</p>
+        <div class="footer-bar bottom-bar"></div>
+    </div>
+
+<script>
+function verificarConexiones() {
+    fetch('/check_conexiones')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var now = new Date();
+            var timeStr = now.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('timestamp').textContent = timeStr;
+
+            var nodos = ['CBBA', 'LPZ', 'STCZ'];
+
+            nodos.forEach(function(n) {
+                var card = document.querySelector('.conexion-card[data-node="' + n + '"]');
+                if (!card) return;
+                var indicator = card.querySelector('.conexion-indicator');
+                var text = card.querySelector('.conexion-text');
+
+                var info = data[n];
+                if (info && info.online) {
+                    indicator.className = 'conexion-indicator connected';
+                    text.textContent = 'CONECTADO';
+                    text.className = 'conexion-text connected';
+                } else {
+                    indicator.className = 'conexion-indicator disconnected';
+                    text.textContent = 'DESCONECTADO';
+                    text.className = 'conexion-text disconnected';
+                }
+            });
+        })
+        .catch(function() {
+            document.querySelectorAll('.conexion-card').forEach(function(card) {
+                var indicator = card.querySelector('.conexion-indicator');
+                var text = card.querySelector('.conexion-text');
+                indicator.className = 'conexion-indicator disconnected';
+                text.textContent = 'SIN VERIFICACION';
+                text.className = 'conexion-text disconnected';
+            });
+            document.getElementById('timestamp').textContent = 'Error de conexion';
+        });
+}
+
+verificarConexiones();
+setInterval(verificarConexiones, 10000);
+</script>
+
+</body>
+</html>
