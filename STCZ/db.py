@@ -35,12 +35,13 @@ def execute(sql, params=None):
     conn = _conn()
     cur  = conn.cursor()
     cur.execute(sql, params or [])
-    conn.commit()
+    # SCOPE_IDENTITY debe ejecutarse ANTES del commit (el ambito se pierde tras commit)
     try:
         cur.execute('SELECT SCOPE_IDENTITY()')
         val = cur.fetchone()[0]
     except Exception:
         val = None
+    conn.commit()
     cur.close(); conn.close()
     return int(val) if val is not None else None
 

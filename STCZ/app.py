@@ -191,6 +191,9 @@ def nueva_transferencia():
             (d['fecha_transferencia'], d['motivo'], d['id_paciente'],
              config.ID_HOSPITAL, d['id_hospital_destino'])
         )
+        if id_transferencia is None:
+            flash('Error al registrar transferencia local.', 'danger')
+            return redirect(url_for('transferencias'))
         data, err = db.lpz_post('/api/transferir_desde', {
             'nodo_origen'       : 'STCZ',
             'id_paciente'       : int(d['id_paciente']),
