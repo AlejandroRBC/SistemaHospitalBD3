@@ -284,6 +284,37 @@ def api_paciente(id_paciente):
     return jsonify({'success': False, 'error': 'Paciente no encontrado'}), 404
 
 
+@app.route('/api/transferir', methods=['POST'])
+def api_transferir_lpz():
+    """Recibe un paciente transferido desde CBBA o STCZ hacia LPZ."""
+    d = request.get_json()
+    try:
+        db.execute(
+            """INSERT INTO paciente (id_paciente, nombre, apellido, ci, fecha_nacimiento, sexo, direccion, telefono, tipo_sangre, alergias, id_hospital)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (d['id_paciente'], d['nombre'], d['apellido'], d['ci'],
+             d['fecha_nacimiento'], d['sexo'], d['direccion'], d['telefono'],
+             d['tipo_sangre'], d['alergias'], config.ID_HOSPITAL)
+        )
+        db.execute(
+            """INSERT INTO historial_clinico_v1 (id_paciente, tipo_sangre, alergias, enfermedades_cronicas)
+               VALUES (%s,%s,%s,%s)""",
+            (d['id_paciente'], d['tipo_sangre'], d['alergias'], d['enfermedades_cronicas'])
+        )
+        hid = db.fetchone('SELECT id_historial FROM historial_clinico_v1 WHERE id_paciente = %s', (d['id_paciente'],))
+        if hid:
+            db.execute(
+                """INSERT INTO historial_clinico_v2 (id_historial, id_paciente, fecha_apertura, antecedentes, observaciones)
+                   VALUES (%s,%s,CURRENT_DATE,%s,%s)""",
+                (hid['id_historial'], d['id_paciente'], d.get('antecedentes', ''), d.get('observaciones', ''))
+            )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    mediator.registrar_en_catalogo(d['id_paciente'], 'LPZ', config.ID_HOSPITAL)
+    return jsonify({'success': True, 'nodo': 'LPZ'})
+
+
 @app.route('/api/buscar')
 def api_buscar():
     q = request.args.get('q', '').strip()

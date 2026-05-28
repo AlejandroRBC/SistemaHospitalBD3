@@ -159,6 +159,7 @@ def transferir_paciente(id_paciente, id_transferencia, id_hospital_destino):
 
     # Mapa: id_hospital -> (nodo, url)
     MAPA = {
+        1: ('LPZ',  config.LPZ_URL),
         2: ('CBBA', config.CBBA_URL),
         3: ('STCZ', config.STCZ_URL),
     }
@@ -258,6 +259,7 @@ def transferir_paciente_desde_remoto(nodo_origen, id_paciente, id_transferencia,
     import requests as req
 
     MAPA = {
+        1: ('LPZ',  config.LPZ_URL),
         2: ('CBBA', config.CBBA_URL),
         3: ('STCZ', config.STCZ_URL),
     }
