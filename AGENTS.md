@@ -1,124 +1,140 @@
 # AGENTS.md — Sistema Hospitalario Distribuido
 
-## Project status
-
-Active prototype development. **LPZ node fully implemented** (Flask + PostgreSQL). **CBBA node fully implemented** (Flask + SQL Server). STCZ remains as a design doc. The goal is academic: demonstrate distributed DB concepts (horizontal fragmentation, mediator node, partial replication) across 3 machines connected via RadminVPN.
-
-## Repo layout
-
-```
-SistemaHospitalario/
-├── ContextoGeneral.md          # Architecture overview (start here)
-├── LPZ/                        # La Paz node — mediator + local hospital (IMPLEMENTED)
-│   ├── contextoLPZ.md          # Original design doc
-│   ├── app.py                  # Flask entrypoint
-│   ├── config.py               # PostgreSQL credentials, port
-│   ├── db.py                   # psycopg2 connection helper
-│   ├── hospital_ips.py         # RadminVPN IPs for all nodes
-│   ├── fragment_catalog.py     # Patient-to-hospital mapping
-│   ├── mediator.py             # Distributed query resolution
-│   ├── replication.py          # Partial replication logic
-│   ├── requirements.txt
-│   ├── creacion_postgresql.txt # Full DB creation script
-│   ├── routes/                 # Flask blueprints
-│   ├── services/               # Business logic layer
-│   ├── utils/                  # Response helpers, validators
-│   ├── sql/                    # schema.sql + seed.sql
-│   ├── templates/              # HTML status page (LPZ colors)
-│   └── static/                 # CSS (verde/rojo)
-├── CBBA/                       # Cochabamba node — regional (IMPLEMENTED)
-│   ├── contextoCBBA.md          # Original design doc
-│   ├── app.py                  # Flask entrypoint
-│   ├── config.py               # SQL Server credentials, port
-│   ├── db.py                   # pyodbc connection helper
-│   ├── hospital_ips.py         # RadminVPN IPs for all nodes
-│   ├── replication.py          # Partial replication logic
-│   ├── requirements.txt        # flask, pyodbc, requests
-│   ├── creacion_sqlserver.txt  # Full DB creation script for SSMS
-│   ├── routes/                 # Flask blueprints (5 routes)
-│   ├── services/               # Business logic + LPZ communication
-│   ├── utils/                  # Response helpers, validators
-│   ├── sql/                    # schema.sql + seed.sql (SQL Server syntax)
-│   ├── templates/              # HTML status page (CBBA colors)
-│   └── static/                 # CSS (celeste/blanco)
-├── STCZ/contextoSTCZ.md        # Santa Cruz design doc (not yet coded)
-└── AGENTS.md
-```
+**Status:** All 3 nodes implemented (prototype). Academic project for distributed DB concepts.
 
 ## Three nodes
 
-| Node | DB | Role | Port |
+| Node | DB | Port | Role |
 |------|----|------|------|
-| **LPZ** (La Paz) | PostgreSQL | hospital local + **mediator** for all distributed queries | 5000 |
-| **CBBA** (Cochabamba) | SQL Server | regional node, own fragments only | 5000 |
-| **STCZ** (Santa Cruz) | SQL Server | regional node, own fragments only | 5000 |
+| **LPZ** (La Paz, mediator) | PostgreSQL 16 | **5000** | Hospital local + **mediator** of all distributed queries |
+| **CBBA** (Cochabamba) | SQL Server | **5001** | Regional node, own fragments only |
+| **STCZ** (Santa Cruz) | SQL Server | **5002** | Regional node, own fragments only |
 
-## Key rules
-
-- **All distributed queries go through LPZ** — CBBA/STCZ never talk directly to each other.
-- Horizontal fragmentation: each hospital stores only its own patients/histories/prescriptions.
-- Only critical data replicated (blood type, allergies, chronic diseases) — no full records.
-- If a node disconnects, the others continue functioning locally.
-- RadminVPN IPs (e.g. `26.x.x.x`), ports, and DB credentials are centralized in `hospital_ips.py` and `config.py` per node — never hardcoded elsewhere.
-
-## LPZ node structure (mediator — reference for STCZ)
+## Repo structure (flat — no `routes/services/utils/`)
 
 ```
-LPZ/
-├── app.py                  # Flask entrypoint (registers blueprints, runs on port 5000)
-├── config.py               # DB credentials, port, hospital name
-├── db.py                   # psycopg2 connection + execute_query helper
-├── hospital_ips.py         # RadminVPN IPs dict — only place IPs are defined
-├── fragment_catalog.py     # FRAGMENTS dict: patient_id → hospital
-├── mediator.py             # resolve_patient(): routes query to local or remote
-├── replication.py          # replicate_to_nodes(): sends critical data to CBBA/STCZ
-├── requirements.txt        # flask, psycopg2, requests
-├── creacion_postgresql.txt # Copy-paste SQL script for pgAdmin
-├── routes/
-│   ├── estado.py           # GET /estado
-│   ├── pacientes.py        # GET /paciente/<id>, GET /pacientes, POST /paciente
-│   ├── historial.py        # GET /historial/<id>, POST /historial
-│   └── mediador.py         # GET /buscar_paciente/<id>, POST /replica
-├── services/
-│   ├── patient_service.py       # Local DB queries (paciente + historial_clinico)
-│   ├── distributed_service.py   # Distributed lookup orchestration
-│   └── remote_query_service.py  # HTTP client to CBBA/STCZ (requests.get/post)
-├── utils/
-│   ├── response.py         # success_response() / error_response()
-│   └── validators.py       # Field & ID validation
-├── sql/
-│   ├── schema.sql          # PostgreSQL DDL
-│   └── seed.sql            # 5 sample patients + 6 clinical histories
-├── templates/
-│   └── index.html          # Status page with green/red LPZ colors
-└── static/
-    └── style.css           # LPZ color palette (verde #007A3E, rojo #CE1126)
+SISTEMA_GENERAL.txt     # Architecture docs (start here)
+contexto.txt            # Original assignment UML & fragmentation specs
+LPZ/ CBBA/ STCZ/
+  app.py                # Flask entrypoint (all routes inline)
+  config.py             # DB creds, RadminVPN IPs, colors, port
+  db.py                 # fetchall/fetchone/execute helpers (+ remote via pyodbc for LPZ)
+  mediator.py           # LPZ-only: fragment catalog, distributed queries, replication
+  setup_*.sql           # Schema + seed data (run ONCE to init DB)
+  README_*.txt          # Per-node setup guide
+  requirements.txt
+  templates/            # Jinja2 (13 pages per node)
+```
+
+## Key architecture rules
+
+- **Star topology:** All distributed queries go through LPZ. CBBA/STCZ never talk directly.
+- **Hybrid fragmentation:** `historial_clinico_v1` (critical — blood type, allergies, chronic diseases) replicates to all nodes as `historial_replica`; `historial_clinico_v2` (heavy notes) stays in origin only.
+- **Patient ID ranges:** LPZ 1-9999, CBBA 10000-19999, STCZ 20000+ (enforced by `SERIAL`/`IDENTITY`).
+- **Replication triggers:** On patient create or history update, LPZ pushes via pyodbc to CBBA+STCZ; CBBA/STCZ HTTP POST to LPZ `/api/replica`, LPZ propagates to the third node.
+- **Medication catalog:** Managed from LPZ, pushed synchronously to CBBA+STCZ via pyodbc.
+- **CBBA/STCZ → LPZ queries:** Priority = Linked Server (OPENQUERY via PostgreSQL ODBC), fallback = HTTP to LPZ `/api/buscar`.
+
+## DB passwords (different per node — update in `config.py`)
+
+```
+LPZ  DB: postgres / admin
+CBBA DB: sa       / Admin1234!
+STCZ DB: sa       / Admin1234!
+```
+
+## Boot order
+
+```
+1. LPZ   (cd LPZ   && pip install -r requirements.txt && python app.py)   # port 5000
+2. CBBA  (cd CBBA  && pip install -r requirements.txt && python app.py)   # port 5001
+3. STCZ  (cd STCZ  && pip install -r requirements.txt && python app.py)   # port 5002
+```
+
+**LPZ must start first** — it receives replica registrations on boot.
+
+## Setup per node
+
+```
+LPZ:  psql -U postgres -c "CREATE DATABASE hospital_lpz;"
+      psql -U postgres -d hospital_lpz -f setup_lpz.sql
+CBBA: sqlcmd -S localhost -U sa -P Admin1234! -Q "CREATE DATABASE hospital_cbba;"
+      sqlcmd -S localhost -U sa -P Admin1234! -i setup_cbba.sql
+STCZ: sqlcmd -S localhost -U sa -P Admin1234! -Q "CREATE DATABASE hospital_stcz;"
+      sqlcmd -S localhost -U sa -P Admin1234! -i setup_stcz.sql
 ```
 
 ## Dependencies
 
 ```
-LPZ:  pip install flask psycopg2 requests
+LPZ:  pip install flask psycopg2-binary pyodbc requests
 CBBA: pip install flask pyodbc requests
 STCZ: pip install flask pyodbc requests
 ```
 
-## Endpoints (each node)
+## RadminVPN IPs (update in each `config.py` before running)
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET | `/estado` | Health check |
-| GET | `/paciente/<id>` | **Local** patient lookup only |
-| GET | `/buscar_paciente/<id>` | LPZ only — distributed lookup (mediator logic) |
-| GET | `/buscar_nacional/<id>` | CBBA/STCZ only — forwards to LPZ |
-| POST | `/replica` | Receive partial replica (blood type, allergies, chronic diseases) |
+```
+LPZ  Config: LPZ_DB['host']=localhost, CBBA_SQL['server']=26.8.33.47, STCZ_SQL['server']=26.116.149.11
+CBBA Config: LPZ_URL=http://26.91.247.115:5000
+STCZ Config: LPZ_URL=http://26.91.247.115:5000
+```
 
-## Tables (per node)
+## All endpoints
 
-- `paciente` — local patients only
-- `historial_clinico` — local histories only
-- `replica_critica` — partial replicas from other nodes
+| Method | Path | Scope |
+|--------|------|-------|
+| GET | `/` | Dashboard (stats: patients, consults, emergencies, doctors, replicas, logs) |
+| GET | `/pacientes` / `/paciente/<id>` | Local patient list/detail |
+| GET+POST | `/paciente/nuevo` | Register patient (auto-replicates V1 to other nodes) |
+| POST | `/historial/actualizar` | Update history (re-triggers replication) |
+| GET | `/consultas` / `/consulta/nueva` | Consultations |
+| GET | `/emergencias` / `/emergencia/nueva` | Emergencies |
+| GET | `/transferencias` / `/transferencia/nueva` | Inter-hospital transfers |
+| GET | `/medicamentos` / `/medicamento/nuevo` | **LPZ only** — adds + replicates to all nodes |
+| GET | `/buscar_nacional?q=...` | Web UI: distributed search (LPZ searches all 3; CBBA/STCZ via LS→HTTP) |
+| GET | `/emergencia_cruzada/<id>` | Critical data for emergency (local replica → remote fallback) |
+| GET | `/logs` | **LPZ only** — distributed operation audit trail |
+| GET | `/api/health` | JSON health check |
+| GET | `/api/paciente/<id>` | JSON patient lookup (catalog-resolved) |
+| GET | `/api/buscar?q=...` | JSON distributed search |
+| GET | `/api/historial_critico/<id>` | JSON critical history (with replica fallback) |
+| POST | `/api/replica` | Receive critical replica from another node |
+| POST | `/api/catalogo/registro` | Register a patient in LPZ's fragmentation catalog |
 
-## No tests / no CI / no build
+## Tables per node
 
-This is a pure Flask prototype with no test suite, no CI, no linter, no type checker. Run each node with `python app.py` and test manually via HTTP or browser on `localhost:5000`.
+All nodes: `paciente`, `doctor`, `consulta`, `emergencia`, `receta`, `receta_medicamento`, `transferencias_hospitalarias`, `historial_clinico_v1`, `historial_clinico_v2`, `hospital`, `medicamento`, `historial_replica`
+LPZ only: `fragment_catalog`, `distributed_logs`
+
+## Color palette per node (flag colors)
+
+```
+LPZ  → Primary=#B22222 (firebrick), Secondary=#FFD700 (gold),    BG=#FFF8DC
+CBBA → Primary=#2E7D32 (green),      Secondary=#A5D6A7 (lime),   BG=#F1F8E9
+STCZ → Primary=#1B5E20 (dark green), Secondary=#80CBC4 (teal),   BG=#E8F5E9
+```
+
+## SQL dialect quirks (LPZ wrapper handles translation)
+
+| Feature | PostgreSQL (LPZ) | SQL Server (CBBA/STCZ) |
+|---------|------------------|------------------------|
+| Params | `%s` | `?` |
+| Auto-inc | `SERIAL` | `IDENTITY(10000,1)` or `IDENTITY(20000,1)` |
+| Date | `CURRENT_DATE`, `NOW()` | `CAST(GETDATE() AS DATE)`, `GETDATE()` |
+| Case-insensitive | `ILIKE '%x%'` | `LIKE '%x%'` (default) |
+| Concat | `\|\|` | `+` |
+| Upsert | `INSERT ... ON CONFLICT DO UPDATE` | `IF EXISTS(...) UPDATE ELSE INSERT` |
+| String quote | single quotes | single quotes |
+
+## No tests / no CI / no linter / no typechecker
+
+Pure Flask prototype. Test manually via `localhost:5000/5001/5002` or HTTP. No test framework, no CI, no build step.
+
+## Node README files (per-node detail)
+
+`LPZ/README_LPZ.txt`, `CBBA/README_CBBA.txt`, `STCZ/README_STCZ.txt` — contain full setup, Linked Server config, and operation flows.
+
+## .gitignore
+
+`venv/`, `__pycache__/`, `*.pyc`, `.env`
