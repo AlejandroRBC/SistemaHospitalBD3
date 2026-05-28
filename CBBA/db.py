@@ -35,9 +35,10 @@ def execute(sql, params=None):
     conn = _conn()
     cur  = conn.cursor()
     cur.execute(sql, params or [])
-    # SCOPE_IDENTITY debe ejecutarse ANTES del commit (el ambito se pierde tras commit)
+    # @@IDENTITY funciona a nivel sesion (no batch) — SCOPE_IDENTITY fallaria
+    # en un cur.execute() separado porque cada uno es un batch distinto
     try:
-        cur.execute('SELECT SCOPE_IDENTITY()')
+        cur.execute('SELECT @@IDENTITY')
         val = cur.fetchone()[0]
     except Exception:
         val = None
