@@ -22,7 +22,7 @@ CBBA_SQL = {
 # Conexion directa al SQL Server de Santa Cruz (desde el mediador)
 STCZ_SQL = {
     'driver': 'ODBC Driver 17 for SQL Server',
-    'server': '26.116.149.11',   # Reemplazar con IP RadminVPN de Santa Cruz
+    'server': '26.29.199.177',   # Reemplazar con IP RadminVPN de Santa Cruz
     'port': 1433,
     'database': 'hospital_stcz',
     'user': 'sa',
@@ -32,7 +32,7 @@ STCZ_SQL = {
 # URLs HTTP de cada nodo (fallback cuando la conexion directa falla)
 LPZ_URL  = 'http://26.91.247.115:5000'
 CBBA_URL = 'http://26.8.33.47:5001'
-STCZ_URL = 'http://26.116.149.11:5002'
+STCZ_URL = 'http://26.29.199.177:5002'
 
 ID_HOSPITAL = 1
 NODO        = 'LPZ'

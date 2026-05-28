@@ -200,14 +200,21 @@ def transferencias():
 def nueva_transferencia():
     if request.method == 'POST':
         d = request.form
-        db.execute(
+        id_transferencia = db.execute(
             """INSERT INTO transferencias_hospitalarias
                (fecha_transferencia, motivo, estado, id_paciente, id_hospital_origen, id_hospital_destino)
-               VALUES (%s,%s,'Pendiente',%s,%s,%s)""",
+               VALUES (%s,%s,'Pendiente',%s,%s,%s) RETURNING id_transferencia""",
             (d['fecha_transferencia'], d['motivo'], d['id_paciente'],
-             config.ID_HOSPITAL, d['id_hospital_destino'])
+             config.ID_HOSPITAL, d['id_hospital_destino']),
+            returning=True
         )
-        flash('Transferencia registrada.', 'success')
+        exito, msg = mediator.transferir_paciente(
+            int(d['id_paciente']), id_transferencia, int(d['id_hospital_destino'])
+        )
+        if exito:
+            flash(msg, 'success')
+        else:
+            flash(f'Transferencia registrada pero {msg}', 'warning')
         return redirect(url_for('transferencias'))
     pacientes_list = db.fetchall('SELECT id_paciente, nombre, apellido FROM paciente ORDER BY apellido')
     hospitales_list = db.fetchall(
@@ -215,6 +222,14 @@ def nueva_transferencia():
     )
     return render_template('transferencia_form.html', **ctx,
                            pacientes=pacientes_list, hospitales=hospitales_list)
+
+
+# ── Hospitales (catálogo de la red) ───────────────────────────────────────────
+
+@app.route('/hospitales')
+def hospitales():
+    rows = db.fetchall('SELECT * FROM hospital ORDER BY id_hospital')
+    return render_template('hospitales.html', **ctx, hospitales=rows)
 
 
 # ── Medicamentos ──────────────────────────────────────────────────────────────
@@ -254,7 +269,8 @@ def emergencia_cruzada(id_paciente):
     """Obtiene datos criticos de un paciente de cualquier nodo para emergencias."""
     h, fuente = mediator.obtener_historial_critico(id_paciente)
     p, nodo   = mediator.obtener_paciente_por_id(id_paciente)
-    return render_template('emergencia_cruzada.html', **ctx,
+    ctx_no_nodo = {k: v for k, v in ctx.items() if k != 'nodo'}
+    return render_template('emergencia_cruzada.html', **ctx_no_nodo,
                            historial=h, paciente=p, fuente=fuente, nodo=nodo)
 
 
@@ -312,6 +328,22 @@ def api_catalogo_registro():
     d = request.get_json()
     mediator.registrar_en_catalogo(d['id_paciente'], d['nodo'], d['id_hospital'])
     return jsonify({'success': True})
+
+
+@app.route('/api/estado_nodos')
+def api_estado_nodos():
+    import requests as req
+    nodos = {}
+    for key, url, nombre in [
+        ('cbba', config.CBBA_URL, 'Cochabamba (CBBA)'),
+        ('stcz', config.STCZ_URL, 'Santa Cruz (STCZ)'),
+    ]:
+        try:
+            r = req.get(url + '/api/health', timeout=2)
+            nodos[key] = {'nombre': nombre, 'conectado': r.status_code == 200}
+        except Exception:
+            nodos[key] = {'nombre': nombre, 'conectado': False}
+    return jsonify(nodos)
 
 
 @app.route('/api/health')

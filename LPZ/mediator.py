@@ -75,56 +75,173 @@ def buscar_paciente_global(termino):
 def obtener_paciente_por_id(id_paciente):
     """
     Localiza un paciente en cualquier nodo usando el catalogo de fragmentacion.
+    Si no hay entrada en el catalogo, busca en los 3 nodos como fallback.
     Retorna (datos_paciente, nodo_origen) o (None, None).
     """
     cat = resolver_nodo(id_paciente)
-    if not cat:
-        return None, None
+    if cat:
+        nodo = cat['nodo']
+        if nodo == 'LPZ':
+            p = db.fetchone('SELECT * FROM paciente WHERE id_paciente = %s', (id_paciente,))
+            return p, 'LPZ'
+        rows, err = db.remote_fetchall(nodo,
+            'SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,)
+        )
+        if rows:
+            return rows[0], nodo
 
-    nodo = cat['nodo']
-    if nodo == 'LPZ':
-        p = db.fetchone('SELECT * FROM paciente WHERE id_paciente = %s', (id_paciente,))
+    # Fallback: buscar en LPZ directo
+    p = db.fetchone('SELECT * FROM paciente WHERE id_paciente = %s', (id_paciente,))
+    if p:
         return p, 'LPZ'
 
-    rows, err = db.remote_fetchall(nodo,
-        'SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,)
-    )
-    return (rows[0] if rows else None), nodo
+    # Fallback: buscar en CBBA y STCZ
+    for nodo in ['CBBA', 'STCZ']:
+        rows, err = db.remote_fetchall(nodo,
+            'SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,)
+        )
+        if rows:
+            return rows[0], nodo
+
+    return None, None
 
 
 def obtener_historial_critico(id_paciente):
     """
     Obtiene el fragmento V1 (critico) del historial del paciente.
     Si el nodo origen no esta disponible, usa la replica local.
+    Si no hay entrada en el catalogo, busca en los 3 nodos como fallback.
     """
     cat = resolver_nodo(id_paciente)
-    if not cat:
-        return None, 'sin_catalogo'
+    nodos_a_intentar = ['LPZ', 'CBBA', 'STCZ'] if not cat else [cat['nodo']]
 
-    nodo = cat['nodo']
-    if nodo == 'LPZ':
-        h = db.fetchone(
-            'SELECT * FROM historial_clinico_v1 WHERE id_paciente = %s', (id_paciente,)
-        )
-        return h, 'LPZ_local'
-
-    # Intentar en nodo remoto
-    rows, err = db.remote_fetchall(nodo,
-        'SELECT * FROM historial_clinico_v1 WHERE id_paciente = ?', (id_paciente,)
-    )
-    if rows:
-        return rows[0], f'{nodo}_remoto'
+    for nodo in nodos_a_intentar:
+        if nodo == 'LPZ':
+            h = db.fetchone(
+                'SELECT * FROM historial_clinico_v1 WHERE id_paciente = %s', (id_paciente,)
+            )
+            if h:
+                return h, 'LPZ_local'
+        else:
+            rows, err = db.remote_fetchall(nodo,
+                'SELECT * FROM historial_clinico_v1 WHERE id_paciente = ?', (id_paciente,)
+            )
+            if rows:
+                return rows[0], f'{nodo}_remoto'
 
     # Fallback: replica critica almacenada localmente
-    replica = db.fetchone(
-        """SELECT * FROM historial_replica
-           WHERE id_paciente = %s AND hospital_origen = %s""",
-        (id_paciente, nodo)
-    )
-    if replica:
-        return replica, f'{nodo}_replica_local'
+    nodo_origen = cat['nodo'] if cat else None
+    if nodo_origen:
+        replica = db.fetchone(
+            """SELECT * FROM historial_replica
+               WHERE id_paciente = %s AND hospital_origen = %s""",
+            (id_paciente, nodo_origen)
+        )
+        if replica:
+            return replica, f'{nodo_origen}_replica_local'
 
     return None, 'no_disponible'
+
+
+# ── Transferencia hospitalaria ─────────────────────────────────────────────────
+
+def transferir_paciente(id_paciente, id_transferencia, id_hospital_destino):
+    """
+    Transfiere un paciente desde LPZ a otro nodo:
+      1. Obtiene datos del paciente e historial desde LPZ
+      2. Llama a la API del hospital destino para crear/recibir al paciente
+      3. Actualiza el fragment_catalog con el nuevo nodo
+      4. Cambia el estado de la transferencia a 'Completada'
+      5. Registra en el log distribuido
+    Retorna (exito: bool, mensaje: str).
+    """
+    import requests as req
+
+    # Mapa: id_hospital -> (nodo, url)
+    MAPA = {
+        2: ('CBBA', config.CBBA_URL),
+        3: ('STCZ', config.STCZ_URL),
+    }
+
+    if id_hospital_destino not in MAPA:
+        return False, f'Hospital destino {id_hospital_destino} no reconocido.'
+
+    nodo_destino, url_destino = MAPA[id_hospital_destino]
+
+    # 1. Obtener datos del paciente e historial desde LPZ
+    paciente = db.fetchone(
+        'SELECT * FROM paciente WHERE id_paciente = %s', (id_paciente,)
+    )
+    if not paciente:
+        return False, f'Paciente ID {id_paciente} no encontrado en LPZ.'
+
+    hist_v1 = db.fetchone(
+        'SELECT * FROM historial_clinico_v1 WHERE id_paciente = %s', (id_paciente,)
+    )
+    hist_v2 = db.fetchone(
+        'SELECT * FROM historial_clinico_v2 WHERE id_paciente = %s', (id_paciente,)
+    )
+
+    payload = {
+        'id_paciente'          : paciente['id_paciente'],
+        'nombre'               : paciente['nombre'],
+        'apellido'             : paciente['apellido'],
+        'ci'                   : paciente['ci'],
+        'fecha_nacimiento'     : str(paciente['fecha_nacimiento']) if paciente.get('fecha_nacimiento') else None,
+        'sexo'                 : paciente['sexo'],
+        'direccion'            : paciente['direccion'] or '',
+        'telefono'             : paciente['telefono'] or '',
+        'tipo_sangre'          : paciente['tipo_sangre'] or '',
+        'alergias'             : paciente['alergias'] or '',
+        'enfermedades_cronicas': hist_v1['enfermedades_cronicas'] if hist_v1 else '',
+        'antecedentes'         : hist_v2['antecedentes'] if hist_v2 else '',
+        'observaciones'        : hist_v2['observaciones'] if hist_v2 else '',
+    }
+
+    # 2. Llamar a la API del destino
+    try:
+        r = req.post(f'{url_destino}/api/transferir', json=payload, timeout=10)
+        if r.status_code != 200:
+            return False, f'Nodo {nodo_destino} respondio HTTP {r.status_code}'
+        resp = r.json()
+        if not resp.get('success'):
+            return False, f'Nodo {nodo_destino} rechazo la transferencia: {resp}'
+    except Exception as e:
+        return False, f'Error al conectar con {nodo_destino}: {e}'
+
+    # 3. Actualizar fragment_catalog en LPZ
+    registrar_en_catalogo(id_paciente, nodo_destino, id_hospital_destino)
+
+    # 4. Cambiar estado de la transferencia a Completada
+    db.execute(
+        'UPDATE transferencias_hospitalarias SET estado = %s WHERE id_transferencia = %s',
+        ('Completada', id_transferencia)
+    )
+
+    # 5. Log
+    _log('TRANSFERENCIA', 'LPZ', nodo_destino, id_paciente,
+         f'Paciente transferido a {nodo_destino} (hospital {id_hospital_destino})')
+
+    # 6. Replicar datos criticos desde LPZ a STCZ si destino es CBBA (y viceversa)
+    #    para que el tercer nodo tenga la replica actualizada del paciente
+    otros_nodos = [n for n in ['CBBA', 'STCZ'] if n != nodo_destino]
+    for otro in otros_nodos:
+        db.remote_execute(otro, """
+            IF EXISTS (SELECT 1 FROM historial_replica WHERE id_paciente = ? AND hospital_origen = ?)
+                UPDATE historial_replica
+                SET tipo_sangre=?, alergias=?, enfermedades_cronicas=?, fecha_actualizacion=GETDATE()
+                WHERE id_paciente=? AND hospital_origen=?
+            ELSE
+                INSERT INTO historial_replica (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
+                VALUES (?,?,?,?,?)
+        """, (
+            id_paciente, nodo_destino,
+            payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas'],
+            id_paciente, nodo_destino,
+            id_paciente, nodo_destino, payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas']
+        ))
+
+    return True, f'Paciente transferido a {nodo_destino} exitosamente.'
 
 
 # ── Replicacion critica ───────────────────────────────────────────────────────

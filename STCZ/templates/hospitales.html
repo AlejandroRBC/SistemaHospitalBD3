@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block titulo %}Hospitales{% endblock %}
+{% block content %}
+
+{% set nodo_meta = {
+  1: {
+    'nodo'   : 'LPZ',
+    'color1' : '#B22222',
+    'color2' : '#FFD700',
+    'motor'  : 'PostgreSQL 16',
+    'db'     : 'hospital_lpz',
+    'ip'     : '26.91.247.115',
+    'puerto' : 5000,
+    'rol'    : 'Mediador Central',
+    'icono'  : 'bi-diagram-3-fill',
+    'flag'   : 'linear-gradient(to bottom, #B22222 50%, #FFD700 50%)',
+    'rango'  : '1 – 9 999'
+  },
+  2: {
+    'nodo'   : 'CBBA',
+    'color1' : '#2E7D32',
+    'color2' : '#FFFFFF',
+    'motor'  : 'SQL Server 2019',
+    'db'     : 'hospital_cbba',
+    'ip'     : '26.8.33.47',
+    'puerto' : 5001,
+    'rol'    : 'Nodo Periférico',
+    'icono'  : 'bi-server',
+    'flag'   : 'linear-gradient(to bottom, #2E7D32 50%, #FFFFFF 50%)',
+    'rango'  : '10 000 – 19 999'
+  },
+  3: {
+    'nodo'   : 'STCZ',
+    'color1' : '#1B5E20',
+    'color2' : '#FFFFFF',
+    'motor'  : 'SQL Server 2019',
+    'db'     : 'hospital_stcz',
+    'ip'     : '26.116.149.11',
+    'puerto' : 5002,
+    'rol'    : 'Nodo Periférico',
+    'icono'  : 'bi-server',
+    'flag'   : 'repeating-linear-gradient(to bottom,#1B5E20 0%,#1B5E20 20%,#FFFFFF 20%,#FFFFFF 40%)',
+    'rango'  : '20 000 +'
+  }
+} %}
+
+{# Separar el hospital propio de los otros #}
+{% set propio = [] %}
+{% set otros  = [] %}
+{% for h in hospitales %}
+  {% set m = nodo_meta[h.id_hospital] %}
+  {% if m.nodo == nodo %}
+    {% set _ = propio.append(h) %}
+  {% else %}
+    {% set _ = otros.append(h) %}
+  {% endif %}
+{% endfor %}
+
+<h2 class="mb-4"><i class="bi bi-building-fill-cross me-2"></i>Hospitales de la Red</h2>
+
+{# ── CARD GRANDE: este hospital ───────────────────────────────────── #}
+{% if propio %}
+{% set h = propio[0] %}
+{% set m = nodo_meta[h.id_hospital] %}
+<div class="card shadow mb-5" style="border:none; overflow:hidden;">
+  <div style="height:12px; background:{{ m.flag }};"></div>
+  <div class="card-header py-4" style="background:{{ m.color1 }}; color:#fff;">
+    <div class="d-flex align-items-center gap-3">
+      <i class="bi bi-hospital-fill" style="font-size:2.5rem;"></i>
+      <div>
+        <h3 class="mb-0 fw-bold">{{ h.nombre }}</h3>
+        <span class="opacity-75">{{ h.ciudad }} · Nodo {{ m.nodo }}</span>
+      </div>
+      <div class="ms-auto text-end">
+        <span class="badge fs-6 px-3 py-2" style="background:#ffffff33; border:1px solid #fff;">
+          <i class="bi bi-pin-fill me-1"></i>Este nodo
+        </span>
+        <div class="mt-1">
+          <span class="badge" id="ping-propio" style="background:#6c757d; font-size:.75rem;">
+            <span class="spinner-border" style="width:.55rem;height:.55rem;border-width:1px;" role="status"></span>
+            verificando...
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-body p-4">
+    <div class="row g-4">
+      <!-- Info del hospital -->
+      <div class="col-md-6">
+        <h5 class="fw-bold mb-3" style="color:{{ m.color1 }};">
+          <i class="bi bi-info-circle-fill me-2"></i>Información del Hospital
+        </h5>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item px-0">
+            <i class="bi bi-geo-alt-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Dirección:</strong> {{ h.direccion or '—' }}
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-telephone-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Teléfono:</strong> {{ h.telefono or '—' }}
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-map-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Ciudad:</strong> {{ h.ciudad }}
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-hash me-2" style="color:{{ m.color1 }};"></i>
+            <strong>ID Hospital:</strong> {{ h.id_hospital }}
+          </li>
+        </ul>
+      </div>
+      <!-- Info del nodo -->
+      <div class="col-md-6">
+        <h5 class="fw-bold mb-3" style="color:{{ m.color1 }};">
+          <i class="bi bi-hdd-network-fill me-2"></i>Nodo Distribuido
+        </h5>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item px-0">
+            <i class="bi bi-diagram-3 me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Rol:</strong>
+            <span class="badge" style="background:{{ m.color1 }};">{{ m.rol }}</span>
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-database-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Motor BD:</strong> {{ m.motor }}
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-server me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Base de datos:</strong> <code>{{ m.db }}</code>
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-wifi me-2" style="color:{{ m.color1 }};"></i>
+            <strong>IP RadminVPN:</strong> <code>{{ m.ip }}</code>
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-plug-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Puerto Flask:</strong> <code>{{ m.puerto }}</code>
+          </li>
+          <li class="list-group-item px-0">
+            <i class="bi bi-table me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Rango de IDs:</strong> {{ m.rango }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ── CARDS PEQUEÑAS: otros hospitales ────────────────────────────── #}
+{% if otros %}
+<h5 class="text-muted mb-3"><i class="bi bi-buildings me-2"></i>Otros nodos de la red</h5>
+<div class="row g-4">
+  {% for h in otros %}
+  {% set m = nodo_meta[h.id_hospital] %}
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100" style="border-top:4px solid {{ m.color1 }};">
+      <div style="height:6px; background:{{ m.flag }};"></div>
+      <div class="card-header d-flex align-items-center gap-2 py-2"
+           style="background:{{ m.color1 }}18;">
+        <i class="bi {{ m.icono }}" style="color:{{ m.color1 }};"></i>
+        <div>
+          <div class="fw-bold" style="color:{{ m.color1 }};">{{ h.nombre }}</div>
+          <small class="text-muted">{{ h.ciudad }} · Nodo {{ m.nodo }}</small>
+        </div>
+        <span class="badge ms-auto" id="ping-{{ m.nodo }}" style="background:#6c757d; font-size:.65rem;">
+          <span class="spinner-border" style="width:.5rem;height:.5rem;border-width:1px;" role="status"></span>
+        </span>
+      </div>
+      <div class="card-body py-3">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item px-0 py-1 small">
+            <i class="bi bi-geo-alt-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Dirección:</strong> {{ h.direccion or '—' }}
+          </li>
+          <li class="list-group-item px-0 py-1 small">
+            <i class="bi bi-telephone-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Teléfono:</strong> {{ h.telefono or '—' }}
+          </li>
+          <li class="list-group-item px-0 py-1 small">
+            <i class="bi bi-database-fill me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Motor:</strong> {{ m.motor }}
+          </li>
+          <li class="list-group-item px-0 py-1 small">
+            <i class="bi bi-wifi me-2" style="color:{{ m.color1 }};"></i>
+            <strong>IP:</strong> <code>{{ m.ip }}</code> · Puerto <code>{{ m.puerto }}</code>
+          </li>
+          <li class="list-group-item px-0 py-1 small">
+            <i class="bi bi-table me-2" style="color:{{ m.color1 }};"></i>
+            <strong>Rango IDs:</strong> {{ m.rango }}
+          </li>
+        </ul>
+      </div>
+      <div class="card-footer py-2 text-center" style="background:{{ m.color1 }}08;">
+        <a href="http://{{ m.ip }}:{{ m.puerto }}" target="_blank"
+           class="btn btn-sm" style="background:{{ m.color1 }};color:#fff;">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir {{ m.nodo }}
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+fetch('/api/estado_nodos')
+  .then(r => r.json())
+  .then(data => {
+    for (const [key, info] of Object.entries(data)) {
+      const badge = document.getElementById('ping-' + key.toUpperCase());
+      if (!badge) continue;
+      badge.style.background = info.conectado ? '#198754' : '#dc3545';
+      badge.innerHTML = info.conectado
+        ? '<i class="bi bi-circle-fill" style="font-size:.45rem;"></i> En línea'
+        : '<i class="bi bi-circle-fill" style="font-size:.45rem;"></i> Sin conexión';
+    }
+    // El nodo propio siempre activo
+    const propio = document.getElementById('ping-propio');
+    if (propio) {
+      propio.style.background = '#198754';
+      propio.innerHTML = '<i class="bi bi-circle-fill" style="font-size:.45rem;"></i> En línea';
+    }
+  })
+  .catch(() => {
+    const propio = document.getElementById('ping-propio');
+    if (propio) {
+      propio.style.background = '#198754';
+      propio.innerHTML = '<i class="bi bi-circle-fill" style="font-size:.45rem;"></i> En línea';
+    }
+  });
+</script>
+{% endblock %}

@@ -27,7 +27,7 @@ IP RADMINVPN
 ------------
 IP CBBA : 26.8.33.47  (esta maquina)
 IP LPZ  : 26.91.247.115 (mediador central)
-IP STCZ : 26.XX.XX.XX
+IP STCZ : 26.116.149.11
 
 COLORES (Bandera Departamento Cochabamba)
 ------------------------------------------
@@ -183,7 +183,7 @@ Software requerido:
 
 Verificar conectividad:
   ping 26.91.247.115   (LPZ debe responder)
-  ping 26.XX.XX.XX     (STCZ debe responder)
+  ping 26.116.149.11     (STCZ debe responder)
 
 ==============================================================
 NOTAS IMPORTANTES

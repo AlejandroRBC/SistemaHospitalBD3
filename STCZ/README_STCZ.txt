@@ -27,7 +27,7 @@ Arranque  : python app.py
 
 IP RADMINVPN
 ------------
-IP STCZ : 26.XX.XX.XX  (configurar segun la maquina real)
+IP STCZ : 26.116.149.11  (configurar segun la maquina real)
 IP LPZ  : 26.91.247.115 (mediador central)
 IP CBBA : 26.8.33.47
 
@@ -61,16 +61,15 @@ COMO LEVANTAR EL NODO STCZ
       -> Server: 26.91.247.115  Port: 5432  Database: hospital_lpz
    c) Ejecutar sp_addlinkedserver del setup_stcz.sql en SSMS
 
-5. ACTUALIZAR IP EN config.py
-   STCZ_URL = 'http://TU_IP_RADMINVPN:5002'
-   Cambiar la IP 26.XX.XX.XX por la IP real de esta maquina.
-   Comunicar esa IP a los demas integrantes para actualizar
-   sus config.py.
+5. VERIFICAR IP EN config.py
+   IP ya configurada: 26.116.149.11 (RadminVPN STCZ)
+   STCZ_URL = 'http://26.116.149.11:5002'
+   Si la IP cambia, actualizar en config.py de CBBA y LPZ tambien.
 
 6. LEVANTAR LA APLICACION
    python app.py
    -> Acceso local: http://localhost:5002
-   -> Acceso red  : http://26.XX.XX.XX:5002
+   -> Acceso red  : http://26.116.149.11:5002
 
 ==============================================================
 TABLAS QUE MANEJA ESTE NODO
@@ -155,9 +154,9 @@ SELECT * FROM OPENQUERY(LPZ_LINK,
    WHERE p.ci = ''1234567'''
 );
 
--- Ver fragmento del catalogo de LPZ:
-SELECT * FROM OPENQUERY(LPZ_LINK,
-  'SELECT id_paciente, nodo FROM fragment_catalog ORDER BY fecha_registro DESC LIMIT 10'
+-- Ver fragmento del catalogo de LPZ (TOP en el outer query; LIMIT no es T-SQL):
+SELECT TOP 10 * FROM OPENQUERY(LPZ_LINK,
+  'SELECT id_paciente, nodo FROM fragment_catalog ORDER BY fecha_registro DESC'
 );
 
 -- Verificar replicas que LPZ tiene de pacientes de STCZ:
@@ -184,8 +183,7 @@ Verificar conectividad antes de arrancar:
 NOTAS IMPORTANTES
 ==============================================================
 
-- Actualizar la IP 26.XX.XX.XX en config.py con la IP real
-  de esta maquina en RadminVPN antes de arrancar
+- IP RadminVPN STCZ configurada: 26.116.149.11 (ya definida en config.py)
 - Si LPZ no esta disponible, STCZ opera en modo autonomo local
 - En emergencias cruzadas, la replica local es la primera linea
   de defensa (no necesita red si los datos ya estan replicados)

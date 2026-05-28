@@ -199,6 +199,14 @@ def nueva_transferencia():
                            pacientes=pacientes_list, hospitales=hospitales_list)
 
 
+# ── Hospitales (catálogo de la red) ───────────────────────────────────────────
+
+@app.route('/hospitales')
+def hospitales():
+    rows = db.fetchall('SELECT * FROM hospital ORDER BY id_hospital')
+    return render_template('hospitales.html', **ctx, hospitales=rows)
+
+
 # ── Medicamentos ──────────────────────────────────────────────────────────────
 
 @app.route('/medicamentos')
@@ -255,6 +263,41 @@ def emergencia_cruzada(id_paciente):
 
 # ── API endpoints ─────────────────────────────────────────────────────────────
 
+@app.route('/api/transferir', methods=['POST'])
+def api_transferir():
+    """Recibe un paciente transferido desde LPZ (via mediador)."""
+    d = request.get_json()
+    try:
+        db.execute_batch(
+            "SET IDENTITY_INSERT paciente ON;"
+            "INSERT INTO paciente (id_paciente, nombre, apellido, ci, fecha_nacimiento, sexo, direccion, telefono, tipo_sangre, alergias, id_hospital) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?);"
+            "SET IDENTITY_INSERT paciente OFF;",
+            (d['id_paciente'], d['nombre'], d['apellido'], d['ci'],
+             d['fecha_nacimiento'], d['sexo'], d['direccion'], d['telefono'],
+             d['tipo_sangre'], d['alergias'], config.ID_HOSPITAL)
+        )
+
+        db.execute(
+            "INSERT INTO historial_clinico_v1 (id_paciente, tipo_sangre, alergias, enfermedades_cronicas) VALUES (?,?,?,?)",
+            (d['id_paciente'], d['tipo_sangre'], d['alergias'], d['enfermedades_cronicas'])
+        )
+
+        hid = db.fetchone('SELECT id_historial FROM historial_clinico_v1 WHERE id_paciente = ?', (d['id_paciente'],))
+        if hid:
+            db.execute(
+                "INSERT INTO historial_clinico_v2 (id_historial, id_paciente, fecha_apertura, antecedentes, observaciones) VALUES (?,?,GETDATE(),?,?)",
+                (hid['id_historial'], d['id_paciente'], d.get('antecedentes', ''), d.get('observaciones', ''))
+            )
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    _notificar_lpz_replica(d['id_paciente'], d['tipo_sangre'], d['alergias'], d['enfermedades_cronicas'])
+    _registrar_en_catalogo_lpz(d['id_paciente'])
+
+    return jsonify({'success': True, 'nodo': 'STCZ'})
+
+
 @app.route('/api/paciente/<int:id_paciente>')
 def api_paciente(id_paciente):
     p = db.fetchone('SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,))
@@ -281,6 +324,22 @@ def api_replica():
             (d['id_paciente'], d['hospital_origen'], d['tipo_sangre'], d['alergias'], d['enfermedades_cronicas'])
         )
     return jsonify({'success': True})
+
+
+@app.route('/api/estado_nodos')
+def api_estado_nodos():
+    import requests as req
+    nodos = {}
+    for key, url, nombre in [
+        ('lpz',  config.LPZ_URL,  'La Paz (LPZ)'),
+        ('cbba', config.CBBA_URL, 'Cochabamba (CBBA)'),
+    ]:
+        try:
+            r = req.get(url + '/api/health', timeout=2)
+            nodos[key] = {'nombre': nombre, 'conectado': r.status_code == 200}
+        except Exception:
+            nodos[key] = {'nombre': nombre, 'conectado': False}
+    return jsonify(nodos)
 
 
 @app.route('/api/health')

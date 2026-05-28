@@ -27,7 +27,7 @@ IP RADMINVPN
 ------------
 IP LPZ  : 26.91.247.115
 IP CBBA : 26.8.33.47
-IP STCZ : 26.XX.XX.XX (configurar segun la maquina de Santa Cruz)
+IP STCZ : 26.116.149.11 (configurar segun la maquina de Santa Cruz)
 
 COLORES (Bandera Departamento La Paz)
 --------------------------------------
@@ -95,7 +95,7 @@ CONEXION A CBBA (para queries distribuidos):
   Driver : ODBC Driver 17 for SQL Server
 
 CONEXION A STCZ (para queries distribuidos):
-  pyodbc -> SQL Server en 26.XX.XX.XX:1433/hospital_stcz
+  pyodbc -> SQL Server en 26.116.149.11:1433/hospital_stcz
   Driver : ODBC Driver 17 for SQL Server
 
 RECIBE LLAMADAS DE:
@@ -157,7 +157,7 @@ Software requerido:
 
 Verificar conectividad:
   ping 26.8.33.47   (CBBA debe responder)
-  ping 26.XX.XX.XX  (STCZ debe responder)
+  ping 26.116.149.11  (STCZ debe responder)
 
 ==============================================================
 NOTAS IMPORTANTES

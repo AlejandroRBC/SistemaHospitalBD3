@@ -210,8 +210,8 @@ EXEC sp_addlinkedsrvlogin
     @rmtuser     = N'postgres',
     @rmtpassword = N'postgres';
 
--- Prueba de conexion:
-SELECT * FROM OPENQUERY(LPZ_LINK, 'SELECT id_paciente, nombre, apellido, tipo_sangre, alergias FROM paciente LIMIT 5');
+-- Prueba de conexion (TOP en el outer query = SQL Server; LIMIT no aplica en T-SQL):
+SELECT TOP 5 * FROM OPENQUERY(LPZ_LINK, 'SELECT id_paciente, nombre, apellido, tipo_sangre, alergias FROM paciente');
 
 -- Buscar paciente de LPZ desde CBBA:
 SELECT * FROM OPENQUERY(LPZ_LINK,
@@ -225,17 +225,16 @@ SELECT * FROM OPENQUERY(LPZ_LINK,
 -- DATOS INICIALES
 -- =============================================================
 
-SET IDENTITY_INSERT hospital ON;
+-- hospital e id_hospital son INT simples (sin IDENTITY), se insertan directamente
 IF NOT EXISTS (SELECT 1 FROM hospital WHERE id_hospital = 1)
 INSERT INTO hospital VALUES (1,'Hospital Central de La Paz','La Paz','Av. Saavedra 2000, Miraflores','+591-2-2224444');
 IF NOT EXISTS (SELECT 1 FROM hospital WHERE id_hospital = 2)
 INSERT INTO hospital VALUES (2,'Hospital Regional de Cochabamba','Cochabamba','Av. Aniceto Arce 456, Centro','+591-4-4221122');
 IF NOT EXISTS (SELECT 1 FROM hospital WHERE id_hospital = 3)
 INSERT INTO hospital VALUES (3,'Hospital del Oriente','Santa Cruz','Av. Cañoto 789, Equipetrol','+591-3-3334455');
-SET IDENTITY_INSERT hospital OFF;
 GO
 
-SET IDENTITY_INSERT medicamento ON;
+-- medicamento e id_medicamento son INT simples (sin IDENTITY), se insertan directamente
 IF NOT EXISTS (SELECT 1 FROM medicamento WHERE id_medicamento = 1)
 INSERT INTO medicamento VALUES (1,'Paracetamol','Analgésico y antipirético','500mg cada 8 horas','Bagó Bolivia');
 IF NOT EXISTS (SELECT 1 FROM medicamento WHERE id_medicamento = 2)
@@ -256,7 +255,6 @@ IF NOT EXISTS (SELECT 1 FROM medicamento WHERE id_medicamento = 9)
 INSERT INTO medicamento VALUES (9,'Captopril','Antihipertensivo de rescate','25mg sublingual si necesario','Roemmers');
 IF NOT EXISTS (SELECT 1 FROM medicamento WHERE id_medicamento = 10)
 INSERT INTO medicamento VALUES (10,'Diclofenaco','Antiinflamatorio para dolor agudo','75mg cada 12 horas','Bagó Bolivia');
-SET IDENTITY_INSERT medicamento OFF;
 GO
 
 INSERT INTO doctor (nombre, apellido, especialidad, telefono, correo, id_hospital)

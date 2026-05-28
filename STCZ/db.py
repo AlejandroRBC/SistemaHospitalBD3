@@ -45,6 +45,15 @@ def execute(sql, params=None):
     return int(val) if val is not None else None
 
 
+def execute_batch(sql, params=None):
+    """Ejecuta SQL batch (ej: SET IDENTITY_INSERT + INSERT) sin SCOPE_IDENTITY."""
+    conn = _conn()
+    cur  = conn.cursor()
+    cur.execute(sql, params or [])
+    conn.commit()
+    cur.close(); conn.close()
+
+
 # ── Consultas distribuidas al nodo mediador LPZ via HTTP ─────────────────────
 
 def lpz_get(endpoint, params=None):
