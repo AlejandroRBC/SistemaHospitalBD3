@@ -186,12 +186,22 @@ def transferencias():
 def nueva_transferencia():
     if request.method == 'POST':
         d = request.form
-        db.execute(
+        id_transferencia = db.execute(
             "INSERT INTO transferencias_hospitalarias (fecha_transferencia, motivo, estado, id_paciente, id_hospital_origen, id_hospital_destino) VALUES (?,?,'Pendiente',?,?,?)",
             (d['fecha_transferencia'], d['motivo'], d['id_paciente'],
              config.ID_HOSPITAL, d['id_hospital_destino'])
         )
-        flash('Transferencia registrada.', 'success')
+        data, err = db.lpz_post('/api/transferir_desde', {
+            'nodo_origen'       : 'STCZ',
+            'id_paciente'       : int(d['id_paciente']),
+            'id_transferencia'  : int(id_transferencia),
+            'id_hospital_destino': int(d['id_hospital_destino']),
+        })
+        if data and data.get('success'):
+            flash(data['msg'], 'success')
+        else:
+            msg = data.get('error', str(err)) if data else str(err)
+            flash(f'Transferencia registrada localmente, pero {msg}', 'warning')
         return redirect(url_for('transferencias'))
     pacientes_list  = db.fetchall('SELECT id_paciente, nombre, apellido FROM paciente ORDER BY apellido')
     hospitales_list = db.fetchall('SELECT id_hospital, nombre FROM hospital WHERE id_hospital != ?', (config.ID_HOSPITAL,))

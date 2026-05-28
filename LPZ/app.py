@@ -301,6 +301,19 @@ def api_historial_critico(id_paciente):
     return jsonify({'success': False, 'error': 'Historial no disponible'}), 404
 
 
+@app.route('/api/transferir_desde', methods=['POST'])
+def api_transferir_desde():
+    """Recibe solicitud de transferencia desde CBBA o STCZ y la orquesta."""
+    d = request.get_json()
+    exito, msg = mediator.transferir_paciente_desde_remoto(
+        d['nodo_origen'], int(d['id_paciente']),
+        int(d['id_transferencia']), int(d['id_hospital_destino'])
+    )
+    if exito:
+        return jsonify({'success': True, 'msg': msg})
+    return jsonify({'success': False, 'error': msg}), 500
+
+
 @app.route('/api/replica', methods=['POST'])
 def api_replica():
     """Recibe una replica critica enviada por CBBA o STCZ."""

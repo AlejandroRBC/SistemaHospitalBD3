@@ -244,6 +244,120 @@ def transferir_paciente(id_paciente, id_transferencia, id_hospital_destino):
     return True, f'Paciente transferido a {nodo_destino} exitosamente.'
 
 
+def transferir_paciente_desde_remoto(nodo_origen, id_paciente, id_transferencia, id_hospital_destino):
+    """
+    Transfiere un paciente desde CBBA o STCZ (remoto) hacia otro nodo.
+    LPZ como mediador orquesta toda la operacion:
+      1. Obtiene datos del paciente e historial desde el nodo origen (via pyodbc)
+      2. Llama a la API del hospital destino para crear/recibir al paciente
+      3. Actualiza el fragment_catalog con el nuevo nodo
+      4. Cambia el estado de la transferencia a 'Completada' en el nodo origen
+      5. Registra en el log distribuido
+    Retorna (exito: bool, mensaje: str).
+    """
+    import requests as req
+
+    MAPA = {
+        2: ('CBBA', config.CBBA_URL),
+        3: ('STCZ', config.STCZ_URL),
+    }
+
+    if id_hospital_destino not in MAPA:
+        return False, f'Hospital destino {id_hospital_destino} no reconocido.'
+
+    nodo_destino, url_destino = MAPA[id_hospital_destino]
+
+    # 1. Obtener datos del paciente desde el nodo origen
+    rows_p, err_p = db.remote_fetchall(nodo_origen,
+        'SELECT * FROM paciente WHERE id_paciente = ?', (id_paciente,)
+    )
+    if err_p or not rows_p:
+        return False, f'Paciente ID {id_paciente} no encontrado en {nodo_origen}: {err_p}'
+    paciente = rows_p[0]
+
+    rows_v1, _ = db.remote_fetchall(nodo_origen,
+        'SELECT * FROM historial_clinico_v1 WHERE id_paciente = ?', (id_paciente,)
+    )
+    rows_v2, _ = db.remote_fetchall(nodo_origen,
+        'SELECT * FROM historial_clinico_v2 WHERE id_paciente = ?', (id_paciente,)
+    )
+    hist_v1 = rows_v1[0] if rows_v1 else None
+    hist_v2 = rows_v2[0] if rows_v2 else None
+
+    payload = {
+        'id_paciente'          : paciente['id_paciente'],
+        'nombre'               : paciente['nombre'],
+        'apellido'             : paciente['apellido'],
+        'ci'                   : paciente['ci'],
+        'fecha_nacimiento'     : str(paciente.get('fecha_nacimiento') or ''),
+        'sexo'                 : paciente['sexo'],
+        'direccion'            : paciente.get('direccion') or '',
+        'telefono'             : paciente.get('telefono') or '',
+        'tipo_sangre'          : paciente.get('tipo_sangre') or '',
+        'alergias'             : paciente.get('alergias') or '',
+        'enfermedades_cronicas': hist_v1['enfermedades_cronicas'] if hist_v1 else '',
+        'antecedentes'         : hist_v2['antecedentes'] if hist_v2 else '',
+        'observaciones'        : hist_v2['observaciones'] if hist_v2 else '',
+    }
+
+    # 2. Llamar a la API del destino
+    try:
+        r = req.post(f'{url_destino}/api/transferir', json=payload, timeout=10)
+        if r.status_code != 200:
+            return False, f'Nodo {nodo_destino} respondio HTTP {r.status_code}'
+        resp = r.json()
+        if not resp.get('success'):
+            return False, f'Nodo {nodo_destino} rechazo la transferencia: {resp}'
+    except Exception as e:
+        return False, f'Error al conectar con {nodo_destino}: {e}'
+
+    # 3. Actualizar fragment_catalog en LPZ
+    registrar_en_catalogo(id_paciente, nodo_destino, id_hospital_destino)
+
+    # 4. Cambiar estado en el nodo origen via pyodbc
+    db.remote_execute(nodo_origen,
+        'UPDATE transferencias_hospitalarias SET estado = ? WHERE id_transferencia = ?',
+        ('Completada', id_transferencia)
+    )
+
+    # 5. Log
+    _log('TRANSFERENCIA', nodo_origen, nodo_destino, id_paciente,
+         f'Paciente transferido desde {nodo_origen} a {nodo_destino}')
+
+    # 6. Replicar datos criticos al tercer nodo (el que no es origen ni destino)
+    otros_nodos = [n for n in ['CBBA', 'STCZ'] if n not in (nodo_destino, nodo_origen)]
+    for otro in otros_nodos:
+        db.remote_execute(otro, """
+            IF EXISTS (SELECT 1 FROM historial_replica WHERE id_paciente = ? AND hospital_origen = ?)
+                UPDATE historial_replica
+                SET tipo_sangre=?, alergias=?, enfermedades_cronicas=?, fecha_actualizacion=GETDATE()
+                WHERE id_paciente=? AND hospital_origen=?
+            ELSE
+                INSERT INTO historial_replica (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
+                VALUES (?,?,?,?,?)
+        """, (
+            id_paciente, nodo_destino,
+            payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas'],
+            id_paciente, nodo_destino,
+            id_paciente, nodo_destino, payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas']
+        ))
+
+    # 7. Replicar tambien en LPZ (mediador)
+    db.execute(
+        """INSERT INTO historial_replica (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
+           VALUES (%s,%s,%s,%s,%s)
+           ON CONFLICT (id_paciente, hospital_origen) DO UPDATE
+           SET tipo_sangre=EXCLUDED.tipo_sangre,
+               alergias=EXCLUDED.alergias,
+               enfermedades_cronicas=EXCLUDED.enfermedades_cronicas,
+               fecha_actualizacion=NOW()""",
+        (id_paciente, nodo_destino,
+         payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas'])
+    )
+
+    return True, f'Paciente transferido desde {nodo_origen} a {nodo_destino} exitosamente.'
+
+
 # ── Replicacion critica ───────────────────────────────────────────────────────
 
 def replicar_critico_a_remotos(id_paciente, origen, tipo_sangre, alergias, enfermedades_cronicas):
