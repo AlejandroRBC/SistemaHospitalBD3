@@ -6,7 +6,7 @@ LPZ_DB = {
     'port': 5432,
     'database': 'hospital_lpz',
     'user': 'postgres',
-    'password': 'postgres'
+    'password': 'admin'
 }
 
 # Conexion directa al SQL Server de Cochabamba (desde el mediador)
@@ -16,23 +16,23 @@ CBBA_SQL = {
     'port': 1433,
     'database': 'hospital_cbba',
     'user': 'sa',
-    'password': 'Admin1234!'
+    'password': '123456'
 }
 
 # Conexion directa al SQL Server de Santa Cruz (desde el mediador)
 STCZ_SQL = {
     'driver': 'ODBC Driver 17 for SQL Server',
-    'server': '26.XX.XX.XX',   # Reemplazar con IP RadminVPN de Santa Cruz
+    'server': '26.116.149.11',
     'port': 1433,
     'database': 'hospital_stcz',
     'user': 'sa',
-    'password': 'Admin1234!'
+    'password': '123456'
 }
 
 # URLs HTTP de cada nodo (fallback cuando la conexion directa falla)
 LPZ_URL  = 'http://26.91.247.115:5000'
 CBBA_URL = 'http://26.8.33.47:5001'
-STCZ_URL = 'http://26.XX.XX.XX:5002'
+STCZ_URL = 'http://26.116.149.11:5002'
 
 ID_HOSPITAL = 1
 NODO        = 'LPZ'

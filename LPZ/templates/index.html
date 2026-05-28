@@ -57,6 +57,38 @@
   </div>
 </div>
 
+<!-- ── Estado de la Red Distribuida ── -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header card-header-nodo">
+    <i class="bi bi-wifi"></i> Estado de la Red Distribuida
+    <span class="badge bg-secondary float-end" style="font-size:.75rem;">
+      <i class="bi bi-circle-fill text-success" style="font-size:.5rem;"></i> LPZ · Mediador Activo
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="card border-secondary" id="status-cbba">
+          <div class="card-body py-3 text-center">
+            <div class="spinner-border spinner-border-sm text-secondary mb-1" role="status"></div>
+            <div class="fw-bold">Cochabamba (CBBA)</div>
+            <small class="text-muted">Verificando...</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card border-secondary" id="status-stcz">
+          <div class="card-body py-3 text-center">
+            <div class="spinner-border spinner-border-sm text-secondary mb-1" role="status"></div>
+            <div class="fw-bold">Santa Cruz (STCZ)</div>
+            <small class="text-muted">Verificando...</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-3">
   <div class="col-md-6">
     <div class="card shadow-sm">
@@ -90,4 +122,42 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setNodeStatus(cardId, nombre, conectado) {
+  const card = document.getElementById(cardId);
+  if (conectado) {
+    card.className = 'card border-success';
+    card.innerHTML = `<div class="card-body py-3 text-center" style="background:#d1e7dd;">
+      <i class="bi bi-wifi fs-4 text-success"></i>
+      <div class="fw-bold mt-1">${nombre}</div>
+      <small class="text-success fw-semibold">
+        <i class="bi bi-circle-fill" style="font-size:.45rem;vertical-align:middle;"></i> Conectado
+      </small></div>`;
+  } else {
+    card.className = 'card border-danger';
+    card.innerHTML = `<div class="card-body py-3 text-center" style="background:#f8d7da;">
+      <i class="bi bi-wifi-off fs-4 text-danger"></i>
+      <div class="fw-bold mt-1">${nombre}</div>
+      <small class="text-danger fw-semibold">
+        <i class="bi bi-circle-fill" style="font-size:.45rem;vertical-align:middle;"></i> Sin conexión
+      </small></div>`;
+  }
+}
+fetch('/api/estado_nodos')
+  .then(r => r.json())
+  .then(data => {
+    for (const [key, info] of Object.entries(data)) {
+      setNodeStatus('status-' + key, info.nombre, info.conectado);
+    }
+  })
+  .catch(() => {
+    ['status-cbba','status-stcz'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div class="card-body text-center text-danger py-3 small">Error al verificar</div>';
+    });
+  });
+</script>
 {% endblock %}

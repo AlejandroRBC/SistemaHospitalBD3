@@ -46,7 +46,7 @@ Topologia: Estrella con LPZ como nodo central
 IPs RadminVPN:
   LPZ  : 26.91.247.115
   CBBA : 26.8.33.47
-  STCZ : 26.XX.XX.XX (configurar segun la maquina real)
+  STCZ : 26.116.149.11 (configurar segun la maquina real)
 
 Puertos Flask:
   LPZ  : 5000
@@ -82,7 +82,7 @@ CASO DE USO 1 - Registrar paciente nuevo en CBBA:
      - LPZ replica los datos criticos a STCZ via pyodbc
 
 CASO DE USO 2 - Busqueda nacional desde STCZ:
-  1. Abrir http://26.XX.XX.XX:5002
+  1. Abrir http://26.116.149.11:5002
   2. Ir a "Busqueda Nacional"
   3. Ingresar CI o nombre del paciente
   4. El sistema:

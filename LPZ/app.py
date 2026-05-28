@@ -217,6 +217,14 @@ def nueva_transferencia():
                            pacientes=pacientes_list, hospitales=hospitales_list)
 
 
+# ── Hospitales (catálogo de la red) ───────────────────────────────────────────
+
+@app.route('/hospitales')
+def hospitales():
+    rows = db.fetchall('SELECT * FROM hospital ORDER BY id_hospital')
+    return render_template('hospitales.html', **ctx, hospitales=rows)
+
+
 # ── Medicamentos ──────────────────────────────────────────────────────────────
 
 @app.route('/medicamentos')
@@ -312,6 +320,22 @@ def api_catalogo_registro():
     d = request.get_json()
     mediator.registrar_en_catalogo(d['id_paciente'], d['nodo'], d['id_hospital'])
     return jsonify({'success': True})
+
+
+@app.route('/api/estado_nodos')
+def api_estado_nodos():
+    import requests as req
+    nodos = {}
+    for key, url, nombre in [
+        ('cbba', config.CBBA_URL, 'Cochabamba (CBBA)'),
+        ('stcz', config.STCZ_URL, 'Santa Cruz (STCZ)'),
+    ]:
+        try:
+            r = req.get(url + '/api/health', timeout=2)
+            nodos[key] = {'nombre': nombre, 'conectado': r.status_code == 200}
+        except Exception:
+            nodos[key] = {'nombre': nombre, 'conectado': False}
+    return jsonify(nodos)
 
 
 @app.route('/api/health')
