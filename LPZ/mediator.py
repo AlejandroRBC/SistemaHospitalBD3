@@ -302,16 +302,42 @@ def transferir_paciente_desde_remoto(nodo_origen, id_paciente, id_transferencia,
         'observaciones'        : hist_v2['observaciones'] if hist_v2 else '',
     }
 
-    # 2. Llamar a la API del destino
-    try:
-        r = req.post(f'{url_destino}/api/transferir', json=payload, timeout=10)
-        if r.status_code != 200:
-            return False, f'Nodo {nodo_destino} respondio HTTP {r.status_code}'
-        resp = r.json()
-        if not resp.get('success'):
-            return False, f'Nodo {nodo_destino} rechazo la transferencia: {resp}'
-    except Exception as e:
-        return False, f'Error al conectar con {nodo_destino}: {e}'
+    # 2. Insertar en el nodo destino
+    if nodo_destino == 'LPZ':
+        # Insercion directa en PostgreSQL local (evita HTTP a si mismo)
+        try:
+            db.execute(
+                """INSERT INTO paciente (id_paciente, nombre, apellido, ci, fecha_nacimiento, sexo, direccion, telefono, tipo_sangre, alergias, id_hospital)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (id_paciente, payload['nombre'], payload['apellido'], payload['ci'],
+                 payload['fecha_nacimiento'], payload['sexo'], payload['direccion'],
+                 payload['telefono'], payload['tipo_sangre'], payload['alergias'], config.ID_HOSPITAL)
+            )
+            db.execute(
+                """INSERT INTO historial_clinico_v1 (id_paciente, tipo_sangre, alergias, enfermedades_cronicas)
+                   VALUES (%s,%s,%s,%s)""",
+                (id_paciente, payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas'])
+            )
+            hid = db.fetchone('SELECT id_historial FROM historial_clinico_v1 WHERE id_paciente = %s', (id_paciente,))
+            if hid:
+                db.execute(
+                    """INSERT INTO historial_clinico_v2 (id_historial, id_paciente, fecha_apertura, antecedentes, observaciones)
+                       VALUES (%s,%s,CURRENT_DATE,%s,%s)""",
+                    (hid['id_historial'], id_paciente, payload['antecedentes'], payload['observaciones'])
+                )
+        except Exception as e:
+            return False, f'Error al insertar paciente en LPZ: {e}'
+    else:
+        # Llamar a la API del destino remoto
+        try:
+            r = req.post(f'{url_destino}/api/transferir', json=payload, timeout=10)
+            if r.status_code != 200:
+                return False, f'Nodo {nodo_destino} respondio HTTP {r.status_code}'
+            resp = r.json()
+            if not resp.get('success'):
+                return False, f'Nodo {nodo_destino} rechazo la transferencia: {resp}'
+        except Exception as e:
+            return False, f'Error al conectar con {nodo_destino}: {e}'
 
     # 3. Actualizar fragment_catalog en LPZ
     registrar_en_catalogo(id_paciente, nodo_destino, id_hospital_destino)
@@ -343,19 +369,6 @@ def transferir_paciente_desde_remoto(nodo_origen, id_paciente, id_transferencia,
             id_paciente, nodo_destino,
             id_paciente, nodo_destino, payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas']
         ))
-
-    # 7. Replicar tambien en LPZ (mediador)
-    db.execute(
-        """INSERT INTO historial_replica (id_paciente, hospital_origen, tipo_sangre, alergias, enfermedades_cronicas)
-           VALUES (%s,%s,%s,%s,%s)
-           ON CONFLICT (id_paciente, hospital_origen) DO UPDATE
-           SET tipo_sangre=EXCLUDED.tipo_sangre,
-               alergias=EXCLUDED.alergias,
-               enfermedades_cronicas=EXCLUDED.enfermedades_cronicas,
-               fecha_actualizacion=NOW()""",
-        (id_paciente, nodo_destino,
-         payload['tipo_sangre'], payload['alergias'], payload['enfermedades_cronicas'])
-    )
 
     return True, f'Paciente transferido desde {nodo_origen} a {nodo_destino} exitosamente.'
 
