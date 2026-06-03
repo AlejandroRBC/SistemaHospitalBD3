@@ -51,7 +51,6 @@
     <a class="navbar-brand" href="{{ url_for('index') }}">
       <i class="bi bi-hospital-fill me-2"></i>{{ hospital }}
     </a>
-    <span class="badge badge-nodo ms-2">NODO {{ nodo }} · MEDIADOR</span>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
       <span class="navbar-toggler-icon"></span>
     </button>
@@ -64,8 +63,8 @@
         <li class="nav-item"><a class="nav-link" href="{{ url_for('medicamentos') }}"><i class="bi bi-capsule"></i> Medicamentos</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('hospitales') }}"><i class="bi bi-hospital-fill"></i> Hospitales</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ url_for('buscar_nacional') }}"><i class="bi bi-globe-americas"></i> Búsqueda Nacional</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('logs') }}"><i class="bi bi-journal-text"></i> Logs</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('recoleccion_datos') }}" style="color:#FFD700 !important;font-weight:800;"><i class="bi bi-database-fill-gear"></i> Recolección</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('logs') }}"><i class="bi bi-journal-text"></i> Actividad</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('recoleccion_datos') }}" style="color:#FFD700 !important;font-weight:800;"><i class="bi bi-hospital-fill"></i> Vista Nacional</a></li>
       </ul>
     </div>
   </div>
@@ -84,7 +83,7 @@
 </div>
 
 <footer class="text-center py-2 mt-4">
-  <small>Sistema Hospitalario Distribuido · Nodo <strong>{{ nodo }}</strong> (Mediador Central) · BD3 UMSA 2026</small>
+  <small>Red Nacional de Hospitales · {{ hospital }} · Bolivia 2026</small>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

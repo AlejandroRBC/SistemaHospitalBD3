@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% block titulo %}Búsqueda Nacional{% endblock %}
 {% block content %}
-<h3><i class="bi bi-globe-americas"></i> Búsqueda Nacional — Todos los Nodos</h3>
-<p class="text-muted">El nodo mediador LPZ consulta en paralelo los 3 fragmentos (LPZ-PostgreSQL, CBBA-SQLServer, STCZ-SQLServer).</p>
+<h3><i class="bi bi-globe-americas"></i> Búsqueda Nacional</h3>
+<p class="text-muted">Busque pacientes registrados en cualquier hospital de la red nacional: La Paz, Cochabamba y Santa Cruz.</p>
 
 <div class="card shadow-sm mb-4">
   <div class="card-body">
@@ -15,13 +15,13 @@
 
 {% if errores %}
 <div class="alert alert-warning">
-  <strong>Nodos con problemas de conectividad:</strong>
+  <strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Hospitales no disponibles:</strong>
   <ul class="mb-0 mt-1">
     {% for nodo_err, msg in errores.items() %}
-    <li><strong>{{ nodo_err }}:</strong> {{ msg }}</li>
+    <li>{% if nodo_err == 'LPZ' %}La Paz{% elif nodo_err == 'CBBA' %}Cochabamba{% else %}Santa Cruz{% endif %}</li>
     {% endfor %}
   </ul>
-  <small class="text-muted">El mediador buscó en los nodos disponibles. Si un nodo estaba caido, sus pacientes no aparecen aqui.</small>
+  <small class="text-muted">Los resultados pueden estar incompletos si algún hospital no está disponible.</small>
 </div>
 {% endif %}
 
@@ -32,27 +32,27 @@
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
       <thead>
-        <tr><th>Nodo</th><th>ID</th><th>Nombre</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th><th>Acción</th></tr>
+        <tr><th>Hospital</th><th>ID</th><th>Nombre</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th><th>Acción</th></tr>
       </thead>
       <tbody>
         {% for r in resultados %}
         <tr>
           <td>
             {% if r.nodo == 'LPZ' %}
-            <span class="badge" style="background:#B22222;color:#FFD700;">LPZ</span>
+            <span class="badge" style="background:#B22222;color:#FFD700;">La Paz</span>
             {% elif r.nodo == 'CBBA' %}
-            <span class="badge bg-success">CBBA</span>
+            <span class="badge bg-success">Cochabamba</span>
             {% else %}
-            <span class="badge" style="background:#1B5E20;">STCZ</span>
+            <span class="badge" style="background:#1B5E20;">Santa Cruz</span>
             {% endif %}
           </td>
-          <td><code>{{ r.id_paciente }}</code></td>
+          <td>{{ r.id_paciente }}</td>
           <td><strong>{{ r.apellido }}, {{ r.nombre }}</strong></td>
           <td>{{ r.ci }}</td>
           <td><span class="badge bg-danger">{{ r.tipo_sangre }}</span></td>
           <td>{{ r.alergias or '—' }}</td>
           <td>
-            <a href="{{ url_for('emergencia_cruzada', id_paciente=r.id_paciente) }}" class="btn btn-sm btn-outline-danger" title="Ver datos criticos para emergencia">
+            <a href="{{ url_for('emergencia_cruzada', id_paciente=r.id_paciente) }}" class="btn btn-sm btn-outline-danger" title="Ver datos críticos para emergencia">
               <i class="bi bi-heart-pulse-fill"></i> Emergencia
             </a>
           </td>
@@ -63,7 +63,7 @@
   </div>
 </div>
 {% else %}
-<div class="alert alert-info">No se encontraron pacientes con ese término en ningún nodo disponible.</div>
+<div class="alert alert-info">No se encontraron pacientes con ese término en ningún hospital disponible.</div>
 {% endif %}
 {% endif %}
 {% endblock %}

@@ -2,14 +2,10 @@
 {% block titulo %}Medicamentos{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h3><i class="bi bi-capsule"></i> Medicamentos — Catálogo Nacional</h3>
+  <h3><i class="bi bi-capsule"></i> Medicamentos</h3>
   <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#formMed">
     <i class="bi bi-plus-circle"></i> Agregar Medicamento
   </button>
-</div>
-
-<div class="alert alert-info">
-  <i class="bi bi-info-circle"></i> Esta tabla es un <strong>catálogo replicado</strong>. Al agregar un medicamento desde LPZ, se propaga automáticamente a CBBA y STCZ (réplica completa síncrona).
 </div>
 
 <div class="collapse mb-3" id="formMed">
@@ -20,7 +16,7 @@
           <div class="col-md-3"><input type="text" name="nombre" class="form-control" placeholder="Nombre" required></div>
           <div class="col-md-3"><input type="text" name="dosis" class="form-control" placeholder="Dosis"></div>
           <div class="col-md-3"><input type="text" name="fabricante" class="form-control" placeholder="Fabricante"></div>
-          <div class="col-md-3"><button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Guardar y Replicar</button></div>
+          <div class="col-md-3"><button type="submit" class="btn btn-primary w-100"><i class="bi bi-save"></i> Guardar</button></div>
           <div class="col-12"><textarea name="descripcion" class="form-control" rows="1" placeholder="Descripción / indicaciones..."></textarea></div>
         </div>
       </form>
@@ -35,7 +31,7 @@
       <tbody>
         {% for m in medicamentos %}
         <tr>
-          <td><code>{{ m.id_medicamento }}</code></td>
+          <td>{{ m.id_medicamento }}</td>
           <td><strong>{{ m.nombre }}</strong></td>
           <td>{{ m.dosis or '—' }}</td>
           <td>{{ m.fabricante or '—' }}</td>

@@ -1,28 +1,38 @@
 {% extends 'base.html' %}
-{% block titulo %}Logs Distribuidos{% endblock %}
+{% block titulo %}Historial de Actividad{% endblock %}
 {% block content %}
-<h3><i class="bi bi-journal-text"></i> Logs de Operaciones Distribuidas</h3>
-<p class="text-muted">Historial de operaciones entre nodos registradas por el mediador LPZ.</p>
+<h3><i class="bi bi-journal-text"></i> Historial de Actividad</h3>
+<p class="text-muted">Registro de operaciones realizadas entre los hospitales de la red nacional.</p>
 <div class="card shadow-sm">
   <div class="card-body p-0">
     <table class="table table-sm table-hover mb-0">
-      <thead><tr><th>Timestamp</th><th>Acción</th><th>Origen</th><th>Destino</th><th>ID Paciente</th><th>Estado</th><th>Detalles</th></tr></thead>
+      <thead><tr><th>Fecha y Hora</th><th>Operación</th><th>Origen</th><th>Destino</th><th>Paciente</th><th>Estado</th><th>Detalle</th></tr></thead>
       <tbody>
         {% for log in logs %}
         <tr>
           <td><small>{{ log.timestamp }}</small></td>
-          <td><code>{{ log.accion }}</code></td>
-          <td><span class="nodo-badge">{{ log.nodo_origen or '—' }}</span></td>
-          <td><span class="badge bg-secondary">{{ log.nodo_destino or '—' }}</span></td>
+          <td>{{ log.accion }}</td>
+          <td>
+            {% if log.nodo_origen == 'LPZ' %}<span class="nodo-badge">La Paz</span>
+            {% elif log.nodo_origen == 'CBBA' %}<span class="badge bg-success">Cochabamba</span>
+            {% elif log.nodo_origen == 'STCZ' %}<span class="badge" style="background:#1B5E20;color:#fff;">Santa Cruz</span>
+            {% else %}{{ log.nodo_origen or '—' }}{% endif %}
+          </td>
+          <td>
+            {% if log.nodo_destino == 'LPZ' %}<span class="nodo-badge">La Paz</span>
+            {% elif log.nodo_destino == 'CBBA' %}<span class="badge bg-success">Cochabamba</span>
+            {% elif log.nodo_destino == 'STCZ' %}<span class="badge" style="background:#1B5E20;color:#fff;">Santa Cruz</span>
+            {% else %}<span class="badge bg-secondary">{{ log.nodo_destino or '—' }}</span>{% endif %}
+          </td>
           <td>{{ log.id_paciente or '—' }}</td>
           <td>
-            {% if log.estado == 'OK' %}<span class="badge bg-success">OK</span>
+            {% if log.estado == 'OK' %}<span class="badge bg-success">Exitoso</span>
             {% else %}<span class="badge bg-danger">{{ log.estado }}</span>{% endif %}
           </td>
           <td><small>{{ log.detalles or '—' }}</small></td>
         </tr>
         {% else %}
-        <tr><td colspan="7" class="text-center text-muted py-4">Sin logs registrados aún.</td></tr>
+        <tr><td colspan="7" class="text-center text-muted py-4">Sin actividad registrada aún.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -1,10 +1,7 @@
 {% extends 'base.html' %}
 {% block titulo %}Medicamentos{% endblock %}
 {% block content %}
-<h3><i class="bi bi-capsule"></i> Medicamentos — Catálogo Nacional (Réplica local STCZ)</h3>
-<div class="alert alert-success">
-  <i class="bi bi-check-circle"></i> Esta es una <strong>réplica completa síncrona</strong> del catálogo nacional administrado en LPZ. Los datos se actualizan automáticamente cuando LPZ agrega un nuevo medicamento.
-</div>
+<h3><i class="bi bi-capsule"></i> Medicamentos</h3>
 <div class="card shadow-sm">
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
@@ -12,7 +9,7 @@
       <tbody>
         {% for m in medicamentos %}
         <tr>
-          <td><code>{{ m.id_medicamento }}</code></td>
+          <td>{{ m.id_medicamento }}</td>
           <td><strong>{{ m.nombre }}</strong></td>
           <td>{{ m.dosis or '—' }}</td>
           <td>{{ m.fabricante or '—' }}</td>

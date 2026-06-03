@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import date, datetime
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import db, mediator, config
 
 app = Flask(__name__)
@@ -235,53 +236,78 @@ def emergencia_cruzada(id_paciente):
                            historial=h, paciente=p, fuente=fuente, nodo=nodo)
 
 # ── Recolección de datos  (reconstrucción UNION ALL de los 3 fragmentos) ──────
+# Optimización: 1 conexión por nodo remoto + los 3 nodos en paralelo.
+# Antes: 12+ conexiones secuenciales (~20-30s). Ahora: ~3-6s.
+
+def _fetch_lpz_datos():
+    return {
+        'pacientes'     : db.fetchall('SELECT * FROM frag_paciente_lpz ORDER BY id_paciente'),
+        'doctores'      : db.fetchall('SELECT * FROM frag_doctor_lpz ORDER BY apellido'),
+        'consultas'     : db.fetchall('SELECT * FROM frag_consulta_lpz ORDER BY fecha DESC'),
+        'emergencias'   : db.fetchall('SELECT * FROM frag_emergencia_lpz ORDER BY fecha DESC'),
+        'transferencias': db.fetchall('SELECT * FROM frag_transferencia_lpz ORDER BY fecha_transferencia DESC'),
+        'historial_v1'  : db.fetchall('SELECT * FROM historial_clinico_v1'),
+    }
+
+def _fetch_cbba_datos():
+    # Una sola conexion PostgreSQL para todas las queries CBBA
+    return db.remote_fetchall_batch('CBBA', [
+        ('pacientes',      'SELECT * FROM frag_paciente_cbba ORDER BY id_paciente', []),
+        ('doctores',       'SELECT * FROM frag_doctor_cbba ORDER BY apellido', []),
+        ('consultas',      'SELECT * FROM frag_consulta_cbba ORDER BY fecha DESC', []),
+        ('emergencias',    'SELECT * FROM frag_emergencia_cbba ORDER BY fecha DESC', []),
+        ('transferencias', 'SELECT * FROM frag_transferencia_cbba ORDER BY fecha_transferencia DESC', []),
+        ('historial_v1',   'SELECT * FROM historial_clinico_v1', []),
+    ])
+
+def _fetch_stcz_datos():
+    # Una sola conexion SQL Server para todas las queries STCZ
+    return db.remote_fetchall_batch('STCZ', [
+        ('pacientes',      'SELECT * FROM frag_paciente_stcz ORDER BY id_paciente', []),
+        ('doctores',       'SELECT * FROM frag_doctor_stcz ORDER BY apellido', []),
+        ('consultas',      'SELECT * FROM frag_consulta_stcz ORDER BY fecha DESC', []),
+        ('emergencias',    'SELECT * FROM frag_emergencia_stcz ORDER BY fecha DESC', []),
+        ('transferencias', 'SELECT * FROM frag_transferencia_stcz ORDER BY fecha_transferencia DESC', []),
+        ('historial_v1',   'SELECT * FROM historial_clinico_v1', []),
+    ])
 
 @app.route('/recoleccion_datos')
 def recoleccion_datos():
     datos, errores = {}, {}
 
-    # LPZ — fragmentos locales (SQL Server)
-    try:
-        datos['lpz'] = {
-            'pacientes'     : db.fetchall('SELECT * FROM frag_paciente_lpz ORDER BY id_paciente'),
-            'doctores'      : db.fetchall('SELECT * FROM frag_doctor_lpz ORDER BY apellido'),
-            'consultas'     : db.fetchall('SELECT * FROM frag_consulta_lpz ORDER BY fecha DESC'),
-            'emergencias'   : db.fetchall('SELECT * FROM frag_emergencia_lpz ORDER BY fecha DESC'),
-            'transferencias': db.fetchall('SELECT * FROM frag_transferencia_lpz ORDER BY fecha_transferencia DESC'),
-            'historial_v1'  : db.fetchall('SELECT * FROM historial_clinico_v1'),
-        }
-    except Exception as e:
-        errores['LPZ'] = str(e); datos['lpz'] = {}
+    # Los 3 nodos se consultan en PARALELO (ThreadPoolExecutor)
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        f_lpz  = ex.submit(_fetch_lpz_datos)
+        f_cbba = ex.submit(_fetch_cbba_datos)
+        f_stcz = ex.submit(_fetch_stcz_datos)
 
-    # CBBA — fragmentos remotos PostgreSQL (%s)
-    try:
-        pacs, ep = db.remote_fetchall('CBBA', 'SELECT * FROM frag_paciente_cbba ORDER BY id_paciente')
-        docs, ed = db.remote_fetchall('CBBA', 'SELECT * FROM frag_doctor_cbba ORDER BY apellido')
-        cons, ec = db.remote_fetchall('CBBA', 'SELECT * FROM frag_consulta_cbba ORDER BY fecha DESC')
-        emer, ee = db.remote_fetchall('CBBA', 'SELECT * FROM frag_emergencia_cbba ORDER BY fecha DESC')
-        tran, et = db.remote_fetchall('CBBA', 'SELECT * FROM frag_transferencia_cbba ORDER BY fecha_transferencia DESC')
-        hv1, eh  = db.remote_fetchall('CBBA', 'SELECT * FROM historial_clinico_v1')
-        datos['cbba'] = {'pacientes': pacs, 'doctores': docs, 'consultas': cons,
-                         'emergencias': emer, 'transferencias': tran, 'historial_v1': hv1}
-        for e in [ep, ed, ec, ee, et, eh]:
-            if e: errores.setdefault('CBBA', e)
-    except Exception as e:
-        errores['CBBA'] = str(e); datos['cbba'] = {}
+        # LPZ local — no retorna (errr, data) tuple
+        try:
+            datos['lpz'] = f_lpz.result(timeout=8)
+        except FutureTimeout:
+            errores['LPZ'] = 'Timeout al consultar base local LPZ.'; datos['lpz'] = {}
+        except Exception as e:
+            errores['LPZ'] = str(e); datos['lpz'] = {}
 
-    # STCZ — fragmentos remotos SQL Server (?)
-    try:
-        pacs, ep = db.remote_fetchall('STCZ', 'SELECT * FROM frag_paciente_stcz ORDER BY id_paciente')
-        docs, ed = db.remote_fetchall('STCZ', 'SELECT * FROM frag_doctor_stcz ORDER BY apellido')
-        cons, ec = db.remote_fetchall('STCZ', 'SELECT * FROM frag_consulta_stcz ORDER BY fecha DESC')
-        emer, ee = db.remote_fetchall('STCZ', 'SELECT * FROM frag_emergencia_stcz ORDER BY fecha DESC')
-        tran, et = db.remote_fetchall('STCZ', 'SELECT * FROM frag_transferencia_stcz ORDER BY fecha_transferencia DESC')
-        hv1, eh  = db.remote_fetchall('STCZ', 'SELECT * FROM historial_clinico_v1')
-        datos['stcz'] = {'pacientes': pacs, 'doctores': docs, 'consultas': cons,
-                         'emergencias': emer, 'transferencias': tran, 'historial_v1': hv1}
-        for e in [ep, ed, ec, ee, et, eh]:
-            if e: errores.setdefault('STCZ', e)
-    except Exception as e:
-        errores['STCZ'] = str(e); datos['stcz'] = {}
+        # CBBA remoto — retorna (dict, error)
+        try:
+            d_cbba, e_cbba = f_cbba.result(timeout=8)
+            datos['cbba'] = d_cbba
+            if e_cbba: errores['CBBA'] = e_cbba
+        except FutureTimeout:
+            errores['CBBA'] = 'Timeout: CBBA no respondio en 8s.'; datos['cbba'] = {}
+        except Exception as e:
+            errores['CBBA'] = str(e); datos['cbba'] = {}
+
+        # STCZ remoto — retorna (dict, error)
+        try:
+            d_stcz, e_stcz = f_stcz.result(timeout=8)
+            datos['stcz'] = d_stcz
+            if e_stcz: errores['STCZ'] = e_stcz
+        except FutureTimeout:
+            errores['STCZ'] = 'Timeout: STCZ no respondio en 8s.'; datos['stcz'] = {}
+        except Exception as e:
+            errores['STCZ'] = str(e); datos['stcz'] = {}
 
     return render_template('recoleccion_datos.html', **ctx, datos=datos, errores=errores)
 

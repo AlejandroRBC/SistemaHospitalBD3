@@ -59,7 +59,9 @@ def execute_batch(sql, params=None):
 # ── PostgreSQL remoto (CBBA) via psycopg2 ────────────────────────────────────
 
 def _cbba_conn():
-    return psycopg2.connect(**config.CBBA_PG)
+    cfg = dict(config.CBBA_PG)
+    cfg['connect_timeout'] = 5   # no esperar mas de 5s si CBBA no responde
+    return psycopg2.connect(**cfg)
 
 
 # ── SQL Server remoto (STCZ) via pyodbc ──────────────────────────────────────
@@ -96,6 +98,32 @@ def remote_fetchall(nodo, sql, params=None):
         return rows, None
     except Exception as e:
         return [], str(e)
+
+
+def remote_fetchall_batch(nodo, queries):
+    """Ejecuta multiples SELECTs en un nodo remoto con UNA SOLA conexion.
+    queries = [(key, sql, params), ...]
+    Retorna (dict{key: [filas]}, error_str | None)
+    """
+    try:
+        results = {}
+        if nodo == 'CBBA':
+            conn = _cbba_conn()
+            cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            for key, sql, params in queries:
+                cur.execute(sql, params or [])
+                results[key] = [dict(r) for r in cur.fetchall()]
+        else:  # STCZ
+            conn = pyodbc.connect(_stcz_connstr())
+            cur  = conn.cursor()
+            for key, sql, params in queries:
+                cur.execute(sql, params or [])
+                cols = [c[0] for c in cur.description]
+                results[key] = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close(); conn.close()
+        return results, None
+    except Exception as e:
+        return {key: [] for key, _, _ in queries}, str(e)
 
 
 def remote_execute(nodo, sql, params=None):

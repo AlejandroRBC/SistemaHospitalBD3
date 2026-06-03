@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% block titulo %}Búsqueda Nacional{% endblock %}
 {% block content %}
-<h3><i class="bi bi-globe-americas"></i> Búsqueda Nacional — via Nodo Mediador LPZ</h3>
-<p class="text-muted">CBBA consulta al mediador LPZ que busca en los 3 fragmentos distribuidos. Método: <strong>Linked Server (OPENQUERY)</strong> con fallback a <strong>HTTP API</strong>.</p>
+<h3><i class="bi bi-globe-americas"></i> Búsqueda Nacional</h3>
+<p class="text-muted">Busque pacientes registrados en cualquier hospital de la red nacional: La Paz, Cochabamba y Santa Cruz.</p>
 
 <div class="card shadow-sm mb-4">
   <div class="card-body">
@@ -13,18 +13,10 @@
   </div>
 </div>
 
-{% if metodo %}
-<div class="alert alert-info py-2">
-  <small><strong>Método usado:</strong>
-    {% if metodo == 'LinkedServer' %}<span class="badge bg-success">Linked Server (OPENQUERY → LPZ PostgreSQL)</span>{% else %}<span class="badge bg-warning text-dark">HTTP API → LPZ :5000</span>{% endif %}
-  </small>
-</div>
-{% endif %}
-
 {% if error %}
 <div class="alert alert-danger">
-  <strong>Error de conectividad:</strong> {{ error }}<br>
-  <small>Verifique que el nodo LPZ esté activo y que el Linked Server LPZ_LINK esté configurado.</small>
+  <strong><i class="bi bi-wifi-off me-1"></i> Búsqueda nacional no disponible.</strong><br>
+  <small>Verifique que el sistema esté en línea e intente nuevamente.</small>
 </div>
 {% endif %}
 
@@ -34,16 +26,16 @@
 <div class="card shadow-sm">
   <div class="card-body p-0">
     <table class="table table-hover mb-0">
-      <thead><tr><th>Nodo</th><th>ID</th><th>Nombre</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th><th>Emergencia</th></tr></thead>
+      <thead><tr><th>Hospital</th><th>ID</th><th>Nombre</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th><th>Emergencia</th></tr></thead>
       <tbody>
         {% for r in resultados %}
         <tr>
           <td>
-            {% if r.nodo == 'LPZ' %}<span class="badge" style="background:#B22222;color:#FFD700;">LPZ</span>
-            {% elif r.nodo == 'CBBA' %}<span class="badge bg-success">CBBA</span>
-            {% else %}<span class="badge" style="background:#1B5E20;">STCZ</span>{% endif %}
+            {% if r.nodo == 'LPZ' %}<span class="badge" style="background:#B22222;color:#FFD700;">La Paz</span>
+            {% elif r.nodo == 'CBBA' %}<span class="badge bg-success">Cochabamba</span>
+            {% else %}<span class="badge" style="background:#1B5E20;">Santa Cruz</span>{% endif %}
           </td>
-          <td><code>{{ r.id_paciente }}</code></td>
+          <td>{{ r.id_paciente }}</td>
           <td><strong>{{ r.apellido }}, {{ r.nombre }}</strong></td>
           <td>{{ r.ci }}</td>
           <td><span class="badge bg-danger">{{ r.tipo_sangre }}</span></td>

@@ -1,21 +1,25 @@
 {% extends 'base.html' %}
 {% block titulo %}Dashboard{% endblock %}
 {% block content %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-speedometer2"></i> Dashboard — {{ hospital }}</h2>
-  <span class="badge fs-6 px-3 py-2" style="background:#B22222;color:#FFD700;">NODO MEDIADOR · LPZ</span>
+  <h2><i class="bi bi-speedometer2"></i> {{ hospital }}</h2>
+  <span class="badge fs-6 px-3 py-2" style="background:#B22222;color:#FFD700;">
+    <i class="bi bi-circle-fill me-1" style="font-size:.5rem;vertical-align:middle;"></i> En línea
+  </span>
 </div>
 
+<!-- Estadísticas -->
 <div class="row g-3 mb-4">
-  <div class="col-sm-6 col-lg-2">
+  <div class="col-6 col-lg-3">
     <div class="card stat-card shadow-sm">
       <div class="card-body text-center">
         <div class="stat-value">{{ stats.pacientes }}</div>
-        <div class="text-muted small"><i class="bi bi-people-fill"></i> Pacientes locales</div>
+        <div class="text-muted small"><i class="bi bi-people-fill"></i> Pacientes</div>
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-lg-2">
+  <div class="col-6 col-lg-3">
     <div class="card stat-card shadow-sm">
       <div class="card-body text-center">
         <div class="stat-value">{{ stats.consultas }}</div>
@@ -23,7 +27,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-lg-2">
+  <div class="col-6 col-lg-3">
     <div class="card stat-card shadow-sm">
       <div class="card-body text-center">
         <div class="stat-value">{{ stats.emergencias }}</div>
@@ -31,7 +35,7 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-lg-2">
+  <div class="col-6 col-lg-3">
     <div class="card stat-card shadow-sm">
       <div class="card-body text-center">
         <div class="stat-value">{{ stats.doctores }}</div>
@@ -39,30 +43,15 @@
       </div>
     </div>
   </div>
-  <div class="col-sm-6 col-lg-2">
-    <div class="card stat-card shadow-sm">
-      <div class="card-body text-center">
-        <div class="stat-value">{{ stats.replicas }}</div>
-        <div class="text-muted small"><i class="bi bi-cloud-arrow-down"></i> Réplicas recibidas</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-sm-6 col-lg-2">
-    <div class="card stat-card shadow-sm">
-      <div class="card-body text-center">
-        <div class="stat-value">{{ stats.logs }}</div>
-        <div class="text-muted small"><i class="bi bi-journal-text"></i> Logs distribuidos</div>
-      </div>
-    </div>
-  </div>
 </div>
 
-<!-- ── Estado de la Red Distribuida ── -->
+<!-- Estado de la Red -->
 <div class="card shadow-sm mb-4">
   <div class="card-header card-header-nodo">
-    <i class="bi bi-wifi"></i> Estado de la Red Distribuida
-    <span class="badge bg-secondary float-end" style="font-size:.75rem;">
-      <i class="bi bi-circle-fill text-success" style="font-size:.5rem;"></i> LPZ · Mediador Activo
+    <i class="bi bi-wifi"></i> Estado de la Red Nacional
+    <span class="badge float-end" style="background:#FFD700;color:#333;font-size:.75rem;">
+      <i class="bi bi-circle-fill text-success me-1" style="font-size:.45rem;vertical-align:middle;"></i>
+      La Paz · Coordinador activo
     </span>
   </div>
   <div class="card-body">
@@ -71,8 +60,8 @@
         <div class="card border-secondary" id="status-cbba">
           <div class="card-body py-3 text-center">
             <div class="spinner-border spinner-border-sm text-secondary mb-1" role="status"></div>
-            <div class="fw-bold">Cochabamba (CBBA)</div>
-            <small class="text-muted">Verificando...</small>
+            <div class="fw-bold">Cochabamba</div>
+            <small class="text-muted">Verificando conexión...</small>
           </div>
         </div>
       </div>
@@ -80,8 +69,8 @@
         <div class="card border-secondary" id="status-stcz">
           <div class="card-body py-3 text-center">
             <div class="spinner-border spinner-border-sm text-secondary mb-1" role="status"></div>
-            <div class="fw-bold">Santa Cruz (STCZ)</div>
-            <small class="text-muted">Verificando...</small>
+            <div class="fw-bold">Santa Cruz</div>
+            <small class="text-muted">Verificando conexión...</small>
           </div>
         </div>
       </div>
@@ -89,41 +78,57 @@
   </div>
 </div>
 
+<!-- Acciones + Info red -->
 <div class="row g-3">
   <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-header card-header-nodo">
-        <i class="bi bi-diagram-3"></i> Arquitectura del Nodo Mediador
-      </div>
-      <div class="card-body">
-        <ul class="list-group list-group-flush">
-          <li class="list-group-item"><strong>Motor local:</strong> <span class="badge bg-primary">SQL Server</span></li>
-          <li class="list-group-item"><strong>Rol:</strong> Mediador Central / Coordinador</li>
-          <li class="list-group-item"><strong>Catálogo de fragmentación:</strong> <span class="badge bg-success">Activo</span></li>
-          <li class="list-group-item"><strong>Nodo CBBA:</strong> <span class="badge bg-success">PostgreSQL</span></li>
-          <li class="list-group-item"><strong>Nodo STCZ:</strong> <span class="badge bg-primary">SQL Server</span></li>
-          <li class="list-group-item"><strong>Red:</strong> RadminVPN</li>
-          <li class="list-group-item"><strong>Puerto Flask:</strong> 5000</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card shadow-sm">
+    <div class="card shadow-sm h-100">
       <div class="card-header card-header-nodo">
         <i class="bi bi-lightning-fill"></i> Acciones Rápidas
       </div>
       <div class="card-body d-grid gap-2">
-        <a href="{{ url_for('nuevo_paciente') }}" class="btn btn-primary"><i class="bi bi-person-plus-fill"></i> Registrar Paciente</a>
-        <a href="{{ url_for('nueva_emergencia') }}" class="btn btn-danger"><i class="bi bi-heart-pulse-fill"></i> Registrar Emergencia</a>
-        <a href="{{ url_for('buscar_nacional') }}" class="btn btn-warning text-dark"><i class="bi bi-globe-americas"></i> Búsqueda Nacional (Todos los Nodos)</a>
-        <a href="{{ url_for('nueva_consulta') }}" class="btn btn-outline-primary"><i class="bi bi-clipboard2-plus"></i> Nueva Consulta</a>
-        <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary"><i class="bi bi-journal-text"></i> Ver Logs Distribuidos</a>
-        <a href="{{ url_for('recoleccion_datos') }}" class="btn btn-dark"><i class="bi bi-database-fill-gear"></i> Recolección de Datos (3 Nodos)</a>
+        <a href="{{ url_for('nuevo_paciente') }}" class="btn btn-primary">
+          <i class="bi bi-person-plus-fill"></i> Registrar nuevo paciente
+        </a>
+        <a href="{{ url_for('nueva_emergencia') }}" class="btn btn-danger">
+          <i class="bi bi-heart-pulse-fill"></i> Registrar emergencia
+        </a>
+        <a href="{{ url_for('buscar_nacional') }}" class="btn btn-warning text-dark">
+          <i class="bi bi-globe-americas"></i> Buscar paciente en todos los hospitales
+        </a>
+        <a href="{{ url_for('nueva_consulta') }}" class="btn btn-outline-primary">
+          <i class="bi bi-clipboard2-plus"></i> Nueva consulta médica
+        </a>
+        <a href="{{ url_for('recoleccion_datos') }}" class="btn btn-dark">
+          <i class="bi bi-hospital-fill"></i> Ver datos de todos los hospitales
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header card-header-nodo">
+        <i class="bi bi-hospital-fill"></i> Red Nacional de Hospitales
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-geo-alt-fill text-danger me-2"></i> Hospital Central de La Paz</span>
+            <span class="badge bg-success">Este hospital</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-geo-alt-fill text-success me-2"></i> Hospital Regional de Cochabamba</span>
+            <span class="badge bg-secondary" id="badge-cbba">—</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-geo-alt-fill" style="color:#1B5E20;" ></i><span class="ms-2">Hospital del Oriente — Santa Cruz</span></span>
+            <span class="badge bg-secondary" id="badge-stcz">—</span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -153,12 +158,17 @@ fetch('/api/estado_nodos')
   .then(data => {
     for (const [key, info] of Object.entries(data)) {
       setNodeStatus('status-' + key, info.nombre, info.conectado);
+      const badge = document.getElementById('badge-' + key);
+      if (badge) {
+        badge.className = info.conectado ? 'badge bg-success' : 'badge bg-danger';
+        badge.textContent = info.conectado ? 'En línea' : 'Sin conexión';
+      }
     }
   })
   .catch(() => {
     ['status-cbba','status-stcz'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.innerHTML = '<div class="card-body text-center text-danger py-3 small">Error al verificar</div>';
+      if (el) el.innerHTML = '<div class="card-body text-center text-danger py-3 small">No se pudo verificar</div>';
     });
   });
 </script>

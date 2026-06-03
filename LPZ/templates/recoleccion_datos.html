@@ -1,49 +1,43 @@
 {% extends 'base.html' %}
-{% block titulo %}Recolección de Datos{% endblock %}
+{% block titulo %}Vista Nacional{% endblock %}
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2><i class="bi bi-database-fill-gear"></i> Recolección de Datos — Reconstrucción Nacional</h2>
+  <h2><i class="bi bi-hospital-fill"></i> Vista Nacional — Todos los Hospitales</h2>
   <div class="d-flex gap-2">
-    <span class="badge fs-6 px-3 py-2" style="background:#B22222;color:#FFD700;">NODO MEDIADOR · LPZ</span>
     <a href="{{ request.url }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i> Actualizar</a>
   </div>
 </div>
 
-<!-- Concepto distribuido -->
-<div class="alert alert-info py-2 mb-3">
-  <i class="bi bi-info-circle-fill"></i>
-  <strong>Cómo funciona:</strong> cada nodo almacena <strong>solo su propio fragmento</strong>.
-  LPZ (mediador) consulta los 3 fragmentos en paralelo y los reconstruye aquí con
-  <code>UNION ALL</code> → vista nacional completa.
-</div>
-
 {% if errores %}
 <div class="alert alert-warning alert-dismissible fade show">
-  <strong><i class="bi bi-exclamation-triangle-fill"></i> Errores de conexión:</strong>
+  <strong><i class="bi bi-exclamation-triangle-fill"></i> Sin conexión con algunos hospitales:</strong>
   {% for nodo_err, msg in errores.items() %}
-    <br><strong>{{ nodo_err }}:</strong> <code>{{ msg }}</code>
+    <br>{% if nodo_err == 'LPZ' %}La Paz{% elif nodo_err == 'CBBA' %}Cochabamba{% else %}Santa Cruz{% endif %}: sin respuesta
   {% endfor %}
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 
-<!-- ── Resumen por nodo ─────────────────────────────────────────────────────── -->
+<!-- Resumen por hospital -->
 <div class="row g-3 mb-4">
-  {% for nodo_key, nodo_nombre, color_p, color_s, motor, frag_nombre in [
-    ('lpz',  'La Paz (LPZ)',      '#B22222', '#FFD700', 'SQL Server', 'frag_paciente_lpz'),
-    ('cbba', 'Cochabamba (CBBA)', '#2E7D32', '#A5D6A7', 'PostgreSQL', 'frag_paciente_cbba'),
-    ('stcz', 'Santa Cruz (STCZ)', '#1B5E20', '#80CBC4', 'SQL Server', 'frag_paciente_stcz'),
+  {% for nodo_key, nodo_nombre, color_p, color_s in [
+    ('lpz',  'La Paz',       '#B22222', '#FFD700'),
+    ('cbba', 'Cochabamba',   '#2E7D32', '#A5D6A7'),
+    ('stcz', 'Santa Cruz',   '#1B5E20', '#80CBC4'),
   ] %}
   {% set nd = datos.get(nodo_key, {}) %}
   <div class="col-md-4">
     <div class="card shadow-sm h-100" style="border-left:5px solid {{ color_p }};">
       <div class="card-header text-white fw-bold d-flex justify-content-between" style="background:{{ color_p }};">
-        <span><i class="bi bi-hdd-network-fill"></i> {{ nodo_nombre }}</span>
-        <span class="badge" style="background:{{ color_s }};color:#222;font-size:.7rem;">{{ motor }}</span>
+        <span><i class="bi bi-hospital-fill"></i> {{ nodo_nombre }}</span>
+        {% if nodo_key in errores %}
+          <span class="badge bg-danger" style="font-size:.7rem;">Sin conexión</span>
+        {% else %}
+          <span class="badge bg-success" style="font-size:.7rem;">En línea</span>
+        {% endif %}
       </div>
       <div class="card-body">
-        <div class="text-muted small mb-2"><code style="font-size:.7rem;">{{ frag_nombre }}</code></div>
         <div class="row text-center g-1">
           <div class="col-4">
             <div class="fw-bold fs-5" style="color:{{ color_p }};">{{ nd.get('pacientes', [])|length }}</div>
@@ -66,15 +60,8 @@
           </div>
           <div class="col-6">
             <div class="fw-bold" style="color:{{ color_p }};">{{ nd.get('historial_v1', [])|length }}</div>
-            <small class="text-muted">Historiales V1</small>
+            <small class="text-muted">Historiales</small>
           </div>
-        </div>
-        <div class="mt-2 text-center">
-          {% if nodo_key in errores %}
-            <span class="badge bg-danger"><i class="bi bi-wifi-off"></i> Sin conexión</span>
-          {% else %}
-            <span class="badge bg-success"><i class="bi bi-wifi"></i> Conectado</span>
-          {% endif %}
         </div>
       </div>
     </div>
@@ -82,63 +69,41 @@
   {% endfor %}
 </div>
 
-<!-- ── RECONSTRUCCION NACIONAL: UNION ALL de los 3 fragmentos ─────────────── -->
+<!-- Todos los pacientes de la red -->
 <div class="card shadow mb-4" style="border:2px solid #B22222;">
   <div class="card-header text-white fw-bold" style="background:#B22222;">
-    <i class="bi bi-union"></i> Reconstrucción Nacional — UNION ALL de los 3 Fragmentos
+    <i class="bi bi-people-fill"></i> Todos los Pacientes — Red Nacional
     <span class="float-end badge bg-warning text-dark" style="font-size:.7rem;">
       {{ datos.get('lpz',{}).get('pacientes',[])|length +
          datos.get('cbba',{}).get('pacientes',[])|length +
          datos.get('stcz',{}).get('pacientes',[])|length }} pacientes totales
     </span>
   </div>
-  <!-- Query SQL que hace la reconstruccion -->
-  <div class="card-body bg-dark text-white p-3" style="font-family:monospace;font-size:.8rem;border-radius:0;">
-    <span class="text-warning">SELECT</span> id_paciente, nombre, apellido, ci, tipo_sangre, alergias,
-    <span class="text-info">'LPZ'</span> AS nodo <span class="text-warning">FROM</span>
-    <span class="text-success">frag_paciente_lpz</span>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <span class="text-muted">-- SQL Server local</span><br>
-    <span class="text-warning">UNION ALL</span><br>
-    <span class="text-warning">SELECT</span> id_paciente, nombre, apellido, ci, tipo_sangre, alergias,
-    <span class="text-info">'CBBA'</span> AS nodo <span class="text-warning">FROM</span>
-    <span class="text-success">frag_paciente_cbba</span>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <span class="text-muted">-- PostgreSQL remoto (psycopg2)</span><br>
-    <span class="text-warning">UNION ALL</span><br>
-    <span class="text-warning">SELECT</span> id_paciente, nombre, apellido, ci, tipo_sangre, alergias,
-    <span class="text-info">'STCZ'</span> AS nodo <span class="text-warning">FROM</span>
-    <span class="text-success">frag_paciente_stcz</span>
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <span class="text-muted">-- SQL Server remoto (pyodbc)</span>
-  </div>
-  <!-- Resultado de la reconstruccion -->
   <div class="card-body p-0">
     <div class="table-responsive">
       <table class="table table-sm table-hover mb-0">
         <thead style="background:#333;color:#fff;">
-          <tr><th>Nodo</th><th>ID</th><th>Nombre Completo</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th><th>Hospital</th></tr>
+          <tr><th>Hospital</th><th>ID</th><th>Nombre Completo</th><th>CI</th><th>Tipo Sangre</th><th>Alergias</th></tr>
         </thead>
         <tbody>
           {% for nodo_key, nodo_nombre, color_p, color_s in [
-            ('lpz',  'LPZ',  '#B22222', '#FFD700'),
-            ('cbba', 'CBBA', '#2E7D32', '#A5D6A7'),
-            ('stcz', 'STCZ', '#1B5E20', '#80CBC4'),
+            ('lpz',  'La Paz',      '#B22222', '#FFD700'),
+            ('cbba', 'Cochabamba',  '#2E7D32', '#A5D6A7'),
+            ('stcz', 'Santa Cruz',  '#1B5E20', '#80CBC4'),
           ] %}
             {% for p in datos.get(nodo_key, {}).get('pacientes', []) %}
             <tr>
               <td><span class="badge" style="background:{{ color_p }};color:{{ color_s }};">{{ nodo_nombre }}</span></td>
-              <td><code>{{ p.id_paciente }}</code></td>
+              <td>{{ p.id_paciente }}</td>
               <td><strong>{{ p.nombre }} {{ p.apellido }}</strong></td>
               <td>{{ p.ci }}</td>
               <td><span class="badge bg-secondary">{{ p.tipo_sangre }}</span></td>
               <td>{{ p.alergias }}</td>
-              <td>{{ p.id_hospital }}</td>
             </tr>
             {% endfor %}
           {% endfor %}
           {% if not (datos.get('lpz',{}).get('pacientes') or datos.get('cbba',{}).get('pacientes') or datos.get('stcz',{}).get('pacientes')) %}
-          <tr><td colspan="7" class="text-center text-muted py-3">Sin datos disponibles</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-3">Sin datos disponibles</td></tr>
           {% endif %}
         </tbody>
       </table>
@@ -146,43 +111,43 @@
   </div>
 </div>
 
-<!-- ── Tabs por nodo: detalle de cada fragmento ───────────────────────────── -->
+<!-- Tabs por hospital -->
 <ul class="nav nav-tabs mb-3" id="nodosTab">
   <li class="nav-item">
     <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-lpz" type="button">
-      <span style="color:#B22222;font-weight:700;"><i class="bi bi-database-fill"></i> LPZ</span>
-      <span class="badge ms-1" style="background:#B22222;color:#FFD700;">SQL Server</span>
+      <i class="bi bi-hospital-fill" style="color:#B22222;"></i>
+      <span class="ms-1 fw-bold" style="color:#B22222;">La Paz</span>
     </button>
   </li>
   <li class="nav-item">
     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cbba" type="button">
-      <span style="color:#2E7D32;font-weight:700;"><i class="bi bi-database-fill"></i> CBBA</span>
-      <span class="badge ms-1 bg-success">PostgreSQL</span>
+      <i class="bi bi-hospital-fill" style="color:#2E7D32;"></i>
+      <span class="ms-1 fw-bold" style="color:#2E7D32;">Cochabamba</span>
     </button>
   </li>
   <li class="nav-item">
     <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stcz" type="button">
-      <span style="color:#1B5E20;font-weight:700;"><i class="bi bi-database-fill"></i> STCZ</span>
-      <span class="badge ms-1" style="background:#1B5E20;">SQL Server</span>
+      <i class="bi bi-hospital-fill" style="color:#1B5E20;"></i>
+      <span class="ms-1 fw-bold" style="color:#1B5E20;">Santa Cruz</span>
     </button>
   </li>
 </ul>
 
 <div class="tab-content">
 
-  <!-- ===== TAB LPZ ===== -->
+  <!-- TAB LA PAZ -->
   <div class="tab-pane fade show active" id="tab-lpz">
     {% set nd = datos.get('lpz', {}) %}
     {% set cp = '#B22222' %}
     {% if 'LPZ' in errores %}
-      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> {{ errores['LPZ'] }}</div>
+      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> Hospital La Paz no disponible en este momento.</div>
     {% else %}
       {% for titulo, icono, clave, cols in [
-        ('frag_paciente_lpz — Fragmento Horizontal Primario', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
-        ('historial_clinico_v1 — Fragmento Vertical Critico (LPZ)', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
-        ('frag_doctor_lpz — Fragmento Horizontal Primario', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
-        ('frag_consulta_lpz — Fragmento Horizontal Derivado', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
-        ('frag_emergencia_lpz — Fragmento Horizontal Derivado', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
+        ('Pacientes', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
+        ('Historial Clínico', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
+        ('Doctores', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
+        ('Consultas', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
+        ('Emergencias', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
       ] %}
       <div class="card shadow-sm mb-3" style="border-left:4px solid {{ cp }};">
         <div class="card-header text-white" style="background:{{ cp }};"><i class="bi bi-{{ icono }}"></i> {{ titulo }}</div>
@@ -205,19 +170,19 @@
     {% endif %}
   </div>
 
-  <!-- ===== TAB CBBA ===== -->
+  <!-- TAB COCHABAMBA -->
   <div class="tab-pane fade" id="tab-cbba">
     {% set nd = datos.get('cbba', {}) %}
     {% set cp = '#2E7D32' %}
     {% if 'CBBA' in errores %}
-      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> {{ errores['CBBA'] }}</div>
+      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> Hospital Cochabamba no disponible en este momento.</div>
     {% else %}
       {% for titulo, icono, clave, cols in [
-        ('frag_paciente_cbba — Fragmento Horizontal Primario', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
-        ('historial_clinico_v1 — Fragmento Vertical Critico (CBBA)', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
-        ('frag_doctor_cbba — Fragmento Horizontal Primario', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
-        ('frag_consulta_cbba — Fragmento Horizontal Derivado', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
-        ('frag_emergencia_cbba — Fragmento Horizontal Derivado', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
+        ('Pacientes', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
+        ('Historial Clínico', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
+        ('Doctores', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
+        ('Consultas', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
+        ('Emergencias', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
       ] %}
       <div class="card shadow-sm mb-3" style="border-left:4px solid {{ cp }};">
         <div class="card-header text-white" style="background:{{ cp }};"><i class="bi bi-{{ icono }}"></i> {{ titulo }}</div>
@@ -240,19 +205,19 @@
     {% endif %}
   </div>
 
-  <!-- ===== TAB STCZ ===== -->
+  <!-- TAB SANTA CRUZ -->
   <div class="tab-pane fade" id="tab-stcz">
     {% set nd = datos.get('stcz', {}) %}
     {% set cp = '#1B5E20' %}
     {% if 'STCZ' in errores %}
-      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> {{ errores['STCZ'] }}</div>
+      <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> Hospital Santa Cruz no disponible en este momento.</div>
     {% else %}
       {% for titulo, icono, clave, cols in [
-        ('frag_paciente_stcz — Fragmento Horizontal Primario', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
-        ('historial_clinico_v1 — Fragmento Vertical Critico (STCZ)', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
-        ('frag_doctor_stcz — Fragmento Horizontal Primario', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
-        ('frag_consulta_stcz — Fragmento Horizontal Derivado', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
-        ('frag_emergencia_stcz — Fragmento Horizontal Derivado', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
+        ('Pacientes', 'people-fill', 'pacientes', ['id_paciente','nombre','apellido','ci','tipo_sangre','alergias']),
+        ('Historial Clínico', 'heart-pulse-fill', 'historial_v1', ['id_historial','id_paciente','tipo_sangre','alergias','enfermedades_cronicas']),
+        ('Doctores', 'person-badge', 'doctores', ['id_doctor','nombre','apellido','especialidad']),
+        ('Consultas', 'clipboard2-pulse', 'consultas', ['id_consulta','fecha','motivo','id_paciente','id_doctor']),
+        ('Emergencias', 'exclamation-triangle-fill', 'emergencias', ['id_emergencia','fecha','tipo_emergencia','estado_paciente','id_paciente']),
       ] %}
       <div class="card shadow-sm mb-3" style="border-left:4px solid {{ cp }};">
         <div class="card-header text-white" style="background:{{ cp }};"><i class="bi bi-{{ icono }}"></i> {{ titulo }}</div>

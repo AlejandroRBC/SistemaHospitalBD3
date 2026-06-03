@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
-{% block titulo %}Emergencia Cruzada{% endblock %}
+{% block titulo %}Atención de Emergencia{% endblock %}
 {% block content %}
 <div class="alert alert-danger border-2">
-  <h4><i class="bi bi-exclamation-triangle-fill"></i> ATENCIÓN DE EMERGENCIA CRUZADA — CBBA</h4>
-  <p class="mb-0">Fuente de datos: <strong>{{ fuente }}</strong></p>
+  <h4><i class="bi bi-exclamation-triangle-fill"></i> ATENCIÓN DE EMERGENCIA</h4>
+  <p class="mb-0">Datos críticos del paciente recuperados desde la red nacional de hospitales.</p>
 </div>
 
 {% if historial %}
@@ -28,16 +28,20 @@
     </div>
     <hr>
     <div class="alert alert-warning mb-0">
-      <strong>Fuente:</strong> {{ fuente }}
-      {% if fuente == 'replica_local' %} — <em>Datos de réplica almacenada localmente en CBBA (nodo origen no disponible)</em>{% endif %}
-      {% if fuente == 'LPZ_remoto' %} — <em>Datos obtenidos en tiempo real del mediador LPZ</em>{% endif %}
+      {% if fuente == 'replica_local' %}
+        <i class="bi bi-info-circle me-1"></i> Datos obtenidos de respaldo local (hospital de origen no disponible).
+      {% elif fuente == 'LPZ_remoto' %}
+        <i class="bi bi-check-circle me-1"></i> Datos obtenidos en tiempo real del hospital de origen.
+      {% else %}
+        <i class="bi bi-check-circle me-1"></i> Datos disponibles.
+      {% endif %}
     </div>
   </div>
 </div>
 {% else %}
 <div class="alert alert-warning">
   No se pudieron obtener datos críticos del paciente ID {{ id_paciente }}.
-  El nodo de origen no está disponible y no existe réplica local en CBBA.
+  El hospital de origen no está disponible en este momento.
 </div>
 {% endif %}
 
