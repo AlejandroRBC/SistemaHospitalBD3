@@ -12,20 +12,20 @@
       <div class="card-header card-header-nodo">Datos del Paciente</div>
       <div class="card-body">
         <dl class="row mb-0">
-          <dt class="col-sm-4">ID Paciente</dt><dd class="col-sm-8"><code>{{ paciente.id_paciente }}</code></dd>
+          <dt class="col-sm-4">ID Paciente</dt><dd class="col-sm-8">{{ paciente.id_paciente }}</dd>
           <dt class="col-sm-4">CI</dt><dd class="col-sm-8">{{ paciente.ci }}</dd>
           <dt class="col-sm-4">Nacimiento</dt><dd class="col-sm-8">{{ paciente.fecha_nacimiento or '—' }}</dd>
           <dt class="col-sm-4">Sexo</dt><dd class="col-sm-8">{{ paciente.sexo or '—' }}</dd>
           <dt class="col-sm-4">Dirección</dt><dd class="col-sm-8">{{ paciente.direccion or '—' }}</dd>
           <dt class="col-sm-4">Teléfono</dt><dd class="col-sm-8">{{ paciente.telefono or '—' }}</dd>
-          <dt class="col-sm-4">Hospital</dt><dd class="col-sm-8"><span class="nodo-badge">LPZ</span></dd>
+          <dt class="col-sm-4">Hospital</dt><dd class="col-sm-8"><span class="nodo-badge">La Paz</span></dd>
         </dl>
       </div>
     </div>
   </div>
   <div class="col-md-6">
     <div class="card shadow-sm border-danger">
-      <div class="card-header bg-danger text-white"><i class="bi bi-shield-fill-exclamation"></i> Historial Crítico V1 (replicado)</div>
+      <div class="card-header bg-danger text-white"><i class="bi bi-shield-fill-exclamation"></i> Información Médica Crítica</div>
       <div class="card-body">
         {% if hist_v1 %}
         <dl class="row mb-0">
@@ -37,17 +37,17 @@
           <dd class="col-sm-7">{{ hist_v1.enfermedades_cronicas or 'Ninguna' }}</dd>
         </dl>
         {% else %}
-        <p class="text-muted">Sin historial crítico registrado.</p>
+        <p class="text-muted">Sin información crítica registrada.</p>
         {% endif %}
       </div>
     </div>
   </div>
 </div>
 
-<!-- Historial V2 (detalle) -->
+<!-- Historial Clínico -->
 <div class="card shadow-sm mb-3">
   <div class="card-header card-header-nodo d-flex justify-content-between">
-    <span><i class="bi bi-file-medical"></i> Historial Clínico V2 (solo en nodo LPZ)</span>
+    <span><i class="bi bi-file-medical"></i> Historial Clínico</span>
     <button class="btn btn-sm btn-light" data-bs-toggle="collapse" data-bs-target="#formHistorial">Editar</button>
   </div>
   <div class="card-body">
@@ -91,7 +91,7 @@
             <textarea name="observaciones" class="form-control" rows="2">{{ hist_v2.observaciones if hist_v2 else '' }}</textarea>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-save"></i> Guardar y Replicar</button>
+        <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-save"></i> Guardar</button>
       </form>
     </div>
   </div>

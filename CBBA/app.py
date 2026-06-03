@@ -190,7 +190,7 @@ def nueva_transferencia():
         data, err = db.lpz_post('/api/transferir_desde', {
             'nodo_origen': 'CBBA', 'id_paciente': int(d['id_paciente']),
             'id_transferencia': int(id_transferencia), 'id_hospital_destino': int(d['id_hospital_destino']),
-        })
+        }, timeout=25)
         if data and data.get('success'):
             flash(data['msg'], 'success')
         else:
@@ -218,22 +218,15 @@ def medicamentos():
 @app.route('/buscar_nacional')
 def buscar_nacional():
     q = request.args.get('q', '').strip()
-    resultados, error, metodo = [], None, None
+    resultados, error = [], None
     if q:
-        rows_ls, err_ls = db.openquery_lpz(
-            f"SELECT id_paciente, nombre, apellido, ci, tipo_sangre, alergias, 'LPZ' AS nodo "
-            f"FROM frag_paciente_lpz WHERE ci = '{q}' OR (nombre + ' ' + apellido) LIKE '%{q}%'"
-        )
-        if not err_ls:
-            resultados, metodo = rows_ls, 'DirectSQL'
+        data, err_http = db.lpz_get('/api/buscar', {'q': q})
+        if data and data.get('success'):
+            resultados = data['data']
         else:
-            data, err_http = db.lpz_get('/api/buscar', {'q': q})
-            if data and data.get('success'):
-                resultados, metodo = data['data'], 'HTTP_API'
-            else:
-                error = f'DirectSQL: {err_ls} | HTTP: {err_http}'
+            error = 'No se pudo conectar con la red nacional. Intente nuevamente.'
     return render_template('busqueda_nacional.html', **ctx,
-                           resultados=resultados, error=error, q=q, metodo=metodo)
+                           resultados=resultados, error=error, q=q)
 
 @app.route('/emergencia_cruzada/<int:id_paciente>')
 def emergencia_cruzada(id_paciente):

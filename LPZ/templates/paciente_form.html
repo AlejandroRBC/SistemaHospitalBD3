@@ -5,27 +5,45 @@
   <div class="col-lg-8">
     <div class="card shadow">
       <div class="card-header card-header-nodo">
-        <h5 class="mb-0"><i class="bi bi-person-plus-fill"></i> Registrar Nuevo Paciente — Nodo LPZ</h5>
+        <h5 class="mb-0"><i class="bi bi-person-plus-fill"></i> Registrar Nuevo Paciente</h5>
       </div>
       <div class="card-body">
-        <form method="POST" action="{{ url_for('nuevo_paciente') }}">
+        <form method="POST" action="{{ url_for('nuevo_paciente') }}" class="needs-validation" novalidate>
           <div class="row g-3">
+
             <div class="col-md-6">
               <label class="form-label fw-bold">Nombre <span class="text-danger">*</span></label>
-              <input type="text" name="nombre" class="form-control" required>
+              <input type="text" name="nombre" class="form-control" required
+                     minlength="2" maxlength="50"
+                     pattern="[A-Za-zÀ-ɏ\s\-']+"
+                     placeholder="Ej: Juan Carlos">
+              <div class="invalid-feedback">Ingrese el nombre (solo letras, mín. 2 caracteres).</div>
             </div>
+
             <div class="col-md-6">
               <label class="form-label fw-bold">Apellido <span class="text-danger">*</span></label>
-              <input type="text" name="apellido" class="form-control" required>
+              <input type="text" name="apellido" class="form-control" required
+                     minlength="2" maxlength="50"
+                     pattern="[A-Za-zÀ-ɏ\s\-']+"
+                     placeholder="Ej: Mamani Quispe">
+              <div class="invalid-feedback">Ingrese el apellido (solo letras, mín. 2 caracteres).</div>
             </div>
+
             <div class="col-md-4">
               <label class="form-label fw-bold">Cédula de Identidad <span class="text-danger">*</span></label>
-              <input type="text" name="ci" class="form-control" required>
+              <input type="text" name="ci" class="form-control" required
+                     minlength="5" maxlength="15"
+                     pattern="[A-Za-z0-9]+"
+                     placeholder="Ej: 1234567">
+              <div class="invalid-feedback">La CI debe tener entre 5 y 15 caracteres alfanuméricos.</div>
             </div>
+
             <div class="col-md-4">
               <label class="form-label fw-bold">Fecha de Nacimiento</label>
-              <input type="date" name="fecha_nacimiento" class="form-control">
+              <input type="date" name="fecha_nacimiento" id="fechaNac" class="form-control">
+              <div class="invalid-feedback">La fecha debe ser válida y anterior a hoy.</div>
             </div>
+
             <div class="col-md-4">
               <label class="form-label fw-bold">Sexo</label>
               <select name="sexo" class="form-select">
@@ -34,16 +52,26 @@
                 <option value="Otro">Otro</option>
               </select>
             </div>
+
             <div class="col-md-8">
               <label class="form-label fw-bold">Dirección</label>
-              <input type="text" name="direccion" class="form-control">
+              <input type="text" name="direccion" class="form-control" maxlength="200"
+                     placeholder="Ej: Av. Montes 123, La Paz">
             </div>
+
             <div class="col-md-4">
               <label class="form-label fw-bold">Teléfono</label>
-              <input type="text" name="telefono" class="form-control">
+              <input type="text" name="telefono" class="form-control"
+                     pattern="[0-9]{6,12}" maxlength="12"
+                     placeholder="Ej: 70012345">
+              <div class="invalid-feedback">Solo dígitos, entre 6 y 12 números.</div>
             </div>
-            <hr class="my-1">
-            <h6 class="text-danger"><i class="bi bi-shield-fill-exclamation"></i> Datos Clínicos Críticos (se replican a CBBA y STCZ)</h6>
+
+            <div class="col-12"><hr class="my-1"></div>
+            <div class="col-12">
+              <h6 class="text-danger"><i class="bi bi-shield-fill-exclamation"></i> Datos Clínicos</h6>
+            </div>
+
             <div class="col-md-4">
               <label class="form-label fw-bold">Tipo de Sangre <span class="text-danger">*</span></label>
               <select name="tipo_sangre" class="form-select" required>
@@ -52,19 +80,27 @@
                 <option value="{{ ts }}">{{ ts }}</option>
                 {% endfor %}
               </select>
+              <div class="invalid-feedback">Seleccione el tipo de sangre.</div>
             </div>
+
             <div class="col-md-8">
               <label class="form-label fw-bold">Alergias</label>
-              <input type="text" name="alergias" class="form-control" placeholder="Ej: Penicilina, Aspirina — o 'Ninguna'">
+              <input type="text" name="alergias" class="form-control" maxlength="200"
+                     placeholder="Ej: Penicilina, Aspirina — o 'Ninguna'">
             </div>
+
             <div class="col-12">
               <label class="form-label fw-bold">Enfermedades Crónicas</label>
-              <input type="text" name="enfermedades_cronicas" class="form-control" placeholder="Ej: Diabetes tipo 2, Hipertensión — o dejar vacío">
+              <input type="text" name="enfermedades_cronicas" class="form-control" maxlength="200"
+                     placeholder="Ej: Diabetes tipo 2, Hipertensión — o dejar vacío">
             </div>
+
             <div class="col-12">
               <label class="form-label fw-bold">Antecedentes Familiares</label>
-              <textarea name="antecedentes" class="form-control" rows="2" placeholder="Antecedentes familiares relevantes..."></textarea>
+              <textarea name="antecedentes" class="form-control" rows="2" maxlength="500"
+                        placeholder="Antecedentes familiares relevantes..."></textarea>
             </div>
+
           </div>
           <div class="mt-4 d-flex gap-2">
             <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save"></i> Registrar Paciente</button>
@@ -75,4 +111,24 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+  const today = new Date().toISOString().split('T')[0];
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 120);
+
+  const fechaNac = document.getElementById('fechaNac');
+  if (fechaNac) {
+    fechaNac.max = today;
+    fechaNac.min = minDate.toISOString().split('T')[0];
+  }
+
+  document.querySelector('form.needs-validation').addEventListener('submit', function(e) {
+    if (!this.checkValidity()) { e.preventDefault(); e.stopPropagation(); }
+    this.classList.add('was-validated');
+  });
+})();
+</script>
 {% endblock %}

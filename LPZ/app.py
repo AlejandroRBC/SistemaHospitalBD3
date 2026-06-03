@@ -39,15 +39,15 @@ def pacientes():
 def nuevo_paciente():
     if request.method == 'POST':
         d = request.form
-        db.execute(
+        pid = db.execute(
             """INSERT INTO frag_paciente_lpz
                (nombre, apellido, ci, fecha_nacimiento, sexo, direccion, telefono, tipo_sangre, alergias, id_hospital)
                VALUES (?,?,?,?,?,?,?,?,?,?)""",
             (d['nombre'], d['apellido'], d['ci'], d['fecha_nacimiento'],
              d['sexo'], d['direccion'], d['telefono'], d['tipo_sangre'],
-             d['alergias'], config.ID_HOSPITAL)
+             d['alergias'], config.ID_HOSPITAL),
+            returning=True
         )
-        pid = db.fetchone('SELECT @@IDENTITY AS id')['id']
         db.execute(
             "INSERT INTO historial_clinico_v1 (id_paciente, tipo_sangre, alergias, enfermedades_cronicas) VALUES (?,?,?,?)",
             (pid, d['tipo_sangre'], d['alergias'], d.get('enfermedades_cronicas', ''))
@@ -210,8 +210,9 @@ def medicamentos():
 @app.route('/medicamento/nuevo', methods=['POST'])
 def nuevo_medicamento():
     d = request.form
-    db.execute('INSERT INTO medicamento (nombre, descripcion, dosis, fabricante) VALUES (?,?,?,?)',
-               (d['nombre'], d['descripcion'], d['dosis'], d['fabricante']))
+    nxt = db.fetchone('SELECT ISNULL(MAX(id_medicamento),0)+1 AS n FROM medicamento')['n']
+    db.execute('INSERT INTO medicamento (id_medicamento, nombre, descripcion, dosis, fabricante) VALUES (?,?,?,?,?)',
+               (nxt, d['nombre'], d['descripcion'], d['dosis'], d['fabricante']))
     mediator.replicar_catalogo_a_remotos(d['nombre'], d['descripcion'], d['dosis'], d['fabricante'])
     flash('Medicamento agregado y replicado en CBBA y STCZ.', 'success')
     return redirect(url_for('medicamentos'))

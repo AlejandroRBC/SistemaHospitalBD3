@@ -13,7 +13,7 @@ LPZ_DB = {
 
 # Conexion directa a PostgreSQL de Cochabamba (desde el mediador via psycopg2)
 CBBA_PG = {
-    'host': '26.8.33.47',
+    'host': '26.91.247.115',
     'port': 5432,
     'database': 'hospital_cbba',
     'user': 'postgres',
@@ -32,7 +32,7 @@ STCZ_SQL = {
 
 # URLs HTTP de cada nodo (fallback cuando la conexion directa falla)
 LPZ_URL  = 'http://26.91.247.115:5000'
-CBBA_URL = 'http://26.8.33.47:5001'
+CBBA_URL = 'http://26.91.247.115:5001'
 STCZ_URL = 'http://26.29.199.177:5002'
 
 ID_HOSPITAL = 1

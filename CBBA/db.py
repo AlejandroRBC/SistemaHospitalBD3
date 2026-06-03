@@ -73,10 +73,10 @@ def lpz_get(endpoint, params=None):
         return None, str(e)
 
 
-def lpz_post(endpoint, payload):
+def lpz_post(endpoint, payload, timeout=5):
     """POST al nodo LPZ. Retorna (data, error)."""
     try:
-        r = requests.post(f"{config.LPZ_URL}{endpoint}", json=payload, timeout=5)
+        r = requests.post(f"{config.LPZ_URL}{endpoint}", json=payload, timeout=timeout)
         return r.json(), None
     except Exception as e:
         return None, str(e)
