@@ -1,28 +1,22 @@
+import psycopg2
+import psycopg2.extras
 import pyodbc
 import requests
 import config
 
 
-# ── SQL Server local (CBBA) ───────────────────────────────────────────────────
+# ── PostgreSQL local (CBBA) ───────────────────────────────────────────────────
 
 def _conn():
-    cs = (
-        f"DRIVER={{{config.SQL_DB['driver']}}};"
-        f"SERVER={config.SQL_DB['server']},{config.SQL_DB['port']};"
-        f"DATABASE={config.SQL_DB['database']};"
-        f"UID={config.SQL_DB['user']};PWD={config.SQL_DB['password']};"
-        f"Connection Timeout=10;"
-    )
-    return pyodbc.connect(cs)
+    return psycopg2.connect(**config.PG_DB)
 
 
 def fetchall(sql, params=None):
     conn = _conn()
-    cur  = conn.cursor()
-    cur.execute(sql, params or [])
-    cols = [c[0] for c in cur.description]
-    rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-    cur.close(); conn.close()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(sql, params or [])
+        rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
     return rows
 
 
@@ -31,29 +25,41 @@ def fetchone(sql, params=None):
     return rows[0] if rows else None
 
 
-def execute(sql, params=None):
+def execute(sql, params=None, returning=False):
     conn = _conn()
-    cur  = conn.cursor()
-    cur.execute(sql, params or [])
-    # @@IDENTITY funciona a nivel sesion (no batch) — SCOPE_IDENTITY fallaria
-    # en un cur.execute() separado porque cada uno es un batch distinto
+    with conn.cursor() as cur:
+        cur.execute(sql, params or [])
+        result = cur.fetchone()[0] if returning and cur.description else None
+    conn.commit(); conn.close()
+    return result
+
+
+# ── Consulta directa al SQL Server LPZ via pyodbc ────────────────────────────
+
+def _lpz_sql_conn():
+    cfg = config.LPZ_SQL
+    cs = (
+        f"DRIVER={{{cfg['driver']}}};"
+        f"SERVER={cfg['server']},{cfg['port']};"
+        f"DATABASE={cfg['database']};"
+        f"UID={cfg['user']};PWD={cfg['password']};"
+        f"Connection Timeout=5;"
+    )
+    return pyodbc.connect(cs)
+
+
+def openquery_lpz(tsql):
+    """Ejecuta una consulta T-SQL directa en el SQL Server de LPZ via pyodbc."""
     try:
-        cur.execute('SELECT @@IDENTITY')
-        val = cur.fetchone()[0]
-    except Exception:
-        val = None
-    conn.commit()
-    cur.close(); conn.close()
-    return int(val) if val is not None else None
-
-
-def execute_batch(sql, params=None):
-    """Ejecuta SQL batch (ej: SET IDENTITY_INSERT + INSERT) sin SCOPE_IDENTITY."""
-    conn = _conn()
-    cur  = conn.cursor()
-    cur.execute(sql, params or [])
-    conn.commit()
-    cur.close(); conn.close()
+        conn = _lpz_sql_conn()
+        cur  = conn.cursor()
+        cur.execute(tsql)
+        cols = [c[0] for c in cur.description]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return [], str(e)
 
 
 # ── Consultas distribuidas al nodo mediador LPZ via HTTP ─────────────────────
@@ -74,22 +80,3 @@ def lpz_post(endpoint, payload):
         return r.json(), None
     except Exception as e:
         return None, str(e)
-
-
-# ── Consulta por Linked Server (OPENQUERY a LPZ PostgreSQL) ──────────────────
-# Requiere que el Linked Server LPZ_LINK este configurado en SQL Server
-
-def openquery_lpz(pg_sql):
-    """Ejecuta una consulta en LPZ via OPENQUERY (Linked Server)."""
-    safe = pg_sql.replace("'", "''")
-    sql  = f"SELECT * FROM OPENQUERY(LPZ_LINK, '{safe}')"
-    try:
-        conn = _conn()
-        cur  = conn.cursor()
-        cur.execute(sql)
-        cols = [c[0] for c in cur.description]
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        cur.close(); conn.close()
-        return rows, None
-    except Exception as e:
-        return [], str(e)

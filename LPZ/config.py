@@ -1,28 +1,29 @@
 # Configuracion del nodo LPZ (La Paz) - MEDIADOR CENTRAL
 # Bandera La Paz: Rojo y Amarillo
+# Motor: SQL Server (nodo principal / mediador)
 
 LPZ_DB = {
-    'host': 'localhost',
-    'port': 5432,
-    'database': 'hospital_lpz',
-    'user': 'postgres',
-    'password': 'admin'
-}
-
-# Conexion directa al SQL Server de Cochabamba (desde el mediador)
-CBBA_SQL = {
     'driver': 'ODBC Driver 17 for SQL Server',
-    'server': '26.8.33.47',
+    'server': 'localhost',
     'port': 1433,
-    'database': 'hospital_cbba',
+    'database': 'hospital_lpz',
     'user': 'sa',
     'password': '123456'
 }
 
-# Conexion directa al SQL Server de Santa Cruz (desde el mediador)
+# Conexion directa a PostgreSQL de Cochabamba (desde el mediador via psycopg2)
+CBBA_PG = {
+    'host': '26.8.33.47',
+    'port': 5432,
+    'database': 'hospital_cbba',
+    'user': 'postgres',
+    'password': 'admin'
+}
+
+# Conexion directa al SQL Server de Santa Cruz (desde el mediador via pyodbc)
 STCZ_SQL = {
     'driver': 'ODBC Driver 17 for SQL Server',
-    'server': '26.29.199.177',   # Reemplazar con IP RadminVPN de Santa Cruz
+    'server': '26.29.199.177',
     'port': 1433,
     'database': 'hospital_stcz',
     'user': 'sa',

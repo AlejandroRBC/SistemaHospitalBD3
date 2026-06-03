@@ -35,8 +35,6 @@ def execute(sql, params=None):
     conn = _conn()
     cur  = conn.cursor()
     cur.execute(sql, params or [])
-    # @@IDENTITY funciona a nivel sesion (no batch) — SCOPE_IDENTITY fallaria
-    # en un cur.execute() separado porque cada uno es un batch distinto
     try:
         cur.execute('SELECT @@IDENTITY')
         val = cur.fetchone()[0]
@@ -54,6 +52,39 @@ def execute_batch(sql, params=None):
     cur.execute(sql, params or [])
     conn.commit()
     cur.close(); conn.close()
+
+
+# ── Consulta directa al SQL Server LPZ via pyodbc ────────────────────────────
+# LPZ es ahora SQL Server — conexion directa estandar SQL Server a SQL Server
+
+def _lpz_sql_conn():
+    """Conexion directa al SQL Server de LPZ."""
+    cs = (
+        f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+        f"SERVER={config.LPZ_URL.replace('http://', '').split(':')[0]},1433;"
+        f"DATABASE=hospital_lpz;"
+        f"UID=sa;PWD=123456;"
+        f"Connection Timeout=5;"
+    )
+    return pyodbc.connect(cs)
+
+
+def openquery_lpz(tsql):
+    """Ejecuta una consulta T-SQL directa en el SQL Server de LPZ via Linked Server.
+    La consulta tsql debe usar sintaxis T-SQL (?, +, LIKE, GETDATE()).
+    """
+    safe = tsql.replace("'", "''")
+    sql  = f"SELECT * FROM OPENQUERY(LPZ_LINK, '{safe}')"
+    try:
+        conn = _conn()
+        cur  = conn.cursor()
+        cur.execute(sql)
+        cols = [c[0] for c in cur.description]
+        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+        cur.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return [], str(e)
 
 
 # ── Consultas distribuidas al nodo mediador LPZ via HTTP ─────────────────────
@@ -74,21 +105,3 @@ def lpz_post(endpoint, payload):
         return r.json(), None
     except Exception as e:
         return None, str(e)
-
-
-# ── Consulta por Linked Server (OPENQUERY a LPZ PostgreSQL) ──────────────────
-
-def openquery_lpz(pg_sql):
-    """Ejecuta una consulta en LPZ via OPENQUERY (Linked Server)."""
-    safe = pg_sql.replace("'", "''")
-    sql  = f"SELECT * FROM OPENQUERY(LPZ_LINK, '{safe}')"
-    try:
-        conn = _conn()
-        cur  = conn.cursor()
-        cur.execute(sql)
-        cols = [c[0] for c in cur.description]
-        rows = [dict(zip(cols, r)) for r in cur.fetchall()]
-        cur.close(); conn.close()
-        return rows, None
-    except Exception as e:
-        return [], str(e)

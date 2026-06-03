@@ -97,10 +97,11 @@
       </div>
       <div class="card-body">
         <ul class="list-group list-group-flush">
-          <li class="list-group-item"><strong>Motor local:</strong> PostgreSQL 16</li>
+          <li class="list-group-item"><strong>Motor local:</strong> <span class="badge bg-primary">SQL Server</span></li>
           <li class="list-group-item"><strong>Rol:</strong> Mediador Central / Coordinador</li>
           <li class="list-group-item"><strong>Catálogo de fragmentación:</strong> <span class="badge bg-success">Activo</span></li>
-          <li class="list-group-item"><strong>Nodos remotos:</strong> CBBA (SQL Server) · STCZ (SQL Server)</li>
+          <li class="list-group-item"><strong>Nodo CBBA:</strong> <span class="badge bg-success">PostgreSQL</span></li>
+          <li class="list-group-item"><strong>Nodo STCZ:</strong> <span class="badge bg-primary">SQL Server</span></li>
           <li class="list-group-item"><strong>Red:</strong> RadminVPN</li>
           <li class="list-group-item"><strong>Puerto Flask:</strong> 5000</li>
         </ul>
@@ -118,6 +119,7 @@
         <a href="{{ url_for('buscar_nacional') }}" class="btn btn-warning text-dark"><i class="bi bi-globe-americas"></i> Búsqueda Nacional (Todos los Nodos)</a>
         <a href="{{ url_for('nueva_consulta') }}" class="btn btn-outline-primary"><i class="bi bi-clipboard2-plus"></i> Nueva Consulta</a>
         <a href="{{ url_for('logs') }}" class="btn btn-outline-secondary"><i class="bi bi-journal-text"></i> Ver Logs Distribuidos</a>
+        <a href="{{ url_for('recoleccion_datos') }}" class="btn btn-dark"><i class="bi bi-database-fill-gear"></i> Recolección de Datos (3 Nodos)</a>
       </div>
     </div>
   </div>

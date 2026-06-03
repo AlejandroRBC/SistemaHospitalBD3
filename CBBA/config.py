@@ -1,11 +1,21 @@
 # Configuracion del nodo CBBA (Cochabamba)
 # Bandera Cochabamba: Verde y Blanco
+# Motor: PostgreSQL
 
-SQL_DB = {
-    'driver': 'ODBC Driver 17 for SQL Server',
-    'server': 'localhost',
-    'port': 1433,
+PG_DB = {
+    'host': 'localhost',
+    'port': 5432,
     'database': 'hospital_cbba',
+    'user': 'postgres',
+    'password': 'admin'
+}
+
+# Conexion directa al SQL Server de LPZ para queries via pyodbc
+LPZ_SQL = {
+    'driver': 'ODBC Driver 17 for SQL Server',
+    'server': '26.91.247.115',
+    'port': 1433,
+    'database': 'hospital_lpz',
     'user': 'sa',
     'password': '123456'
 }
